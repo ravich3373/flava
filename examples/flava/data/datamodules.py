@@ -7,10 +7,15 @@
 import os
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from pathlib import Path
+import pandas as pd
 
 import torch
 import torchvision
-from flava.definitions import HFDatasetInfo, TorchVisionDatasetInfo
+from torchvision.io import read_image
+from PIL import Image
+from torch.utils.data import Dataset
+from flava.definitions import HFDatasetInfo, TorchVisionDatasetInfo, ISICInfo
 from pytorch_lightning import LightningDataModule
 from transformers import (
     BertTokenizer,
@@ -36,8 +41,75 @@ from .utils import build_datasets_from_info, fetch_images
 
 
 def transform_image(transform, sample):
-    sample.update(transform(sample["image"]))
+    sample.update(transform(sample["img"]))# image ravi
     return sample
+
+
+class ISICDataset(Dataset):
+    def __init__(self,
+                 csv_path: Union[Path, str],
+                 img_path: Union[Path, str],
+                 mode):
+        super().__init__()
+        self.cols = ["image_name", "diagnosis", "description"]
+        self.df = pd.read_csv(csv_path, usecols=self.cols)
+        self.img_dir = img_path
+        self.transforms = None
+        self.mode = mode
+        self.label_num2str = {0: 'NV',
+                              1: 'MEL',
+                              2: 'BCC',
+                              3: 'BKL',
+                              4: 'AK',
+                              5: 'SCC',
+                              6: 'VASC',
+                              7: 'DF'}
+        self.label_str2num = {'NV': 0,
+                              'MEL':1,
+                              'BCC':2,
+                              'BKL':3,
+                              'AK':4,
+                              'SCC':5,
+                              'VASC':6,
+                              'DF':7}
+        self.df['diagnosis'] = self.df["diagnosis"].apply(lambda l: self.label_str2num[l])
+        if mode == "text":
+            self.df = self.df[["diagnosis", "description"]]
+        elif mode == "image":
+            self.df = self.df[["diagnosis", "image_name"]]
+        elif mode == "mlm":
+            self.df = self.df[["description"]]
+        
+        d = {"image_name": "image",
+             "diagnosis": "label",
+             "description": "text"}
+        self.df.rename(mapper=d, axis=1, inplace=True)
+
+    def __getitem__(self, index):
+        data = self.df.iloc[index].to_dict()
+        if "image" in data.keys():
+            im_pth = os.path.join(self.img_dir, data['image'])
+            img = Image.open(im_pth)
+            data['image'] = img
+
+        if self.mode == "image" and self.transforms is not None:
+            data.update(self.transforms(img))                
+        elif self.mode == "mlm" and self.transforms is not None:
+            return self.transforms(data)
+        elif self.mode == "vl" and self.transforms is not None:
+            return self.transforms(data)
+        return data
+
+    def __len__(self):
+        return len(self.df)
+
+    def set_transform(self, transforms):
+        self.transforms = transforms
+
+    def select(self, idxs):
+        idx = idxs[0]
+        data = self.df.iloc[idx].to_dict()
+        return [data]
 
 
 class DataCollatorForWholeWordMaskRetainingBatch(DataCollatorForWholeWordMask):
@@ -86,7 +158,7 @@ class ImageDataModule(LightningDataModule):
         )
         self.train_dataset.set_transform(train_transform)
         self.val_dataset = build_datasets_from_info(
-            self.val_dataset_infos, split="validation"
+            self.val_dataset_infos, split="test"#validation ravi
         )
         self.val_dataset.set_transform(val_transform)
 
@@ -242,6 +314,62 @@ class MLMDataModule(TextDataModule):
         self.val_dataset = build_datasets_from_info(
             self.val_dataset_infos, split="validation"
         )
+        self.val_dataset.set_transform(transform)
+
+    def _build_dataloader(self, dataset, drop_last=True, shuffle=True):
+        # uneven batches can cause distributed issues,
+        # drop last batch to prevent those.
+        # ideally, we don't need to drop these for unimodal cases
+        # but just to be safe
+        return super()._build_dataloader(dataset, drop_last=drop_last, shuffle=shuffle)
+
+    def _build_collator(self):
+        return DataCollatorForLanguageModeling(
+            self.tokenizer, mlm_probability=self.mlm_probability
+        )
+
+    def on_after_batch_transfer(self, batch, *args):
+        batch["text_masked"] = batch.pop("input_ids")
+        batch["mlm_labels"] = batch.pop("labels")
+        batch["mlm_labels"][batch["mlm_labels"] == -100] = self.ignore_index
+        return batch
+
+
+class ISICMLMDataModule(TextDataModule):
+    def __init__(
+        self,
+        train_infos: List[HFDatasetInfo],
+        text_columns: List[str] = ["text"],
+        val_infos: Optional[List[HFDatasetInfo]] = None,
+        mlm_probability: float = 0.15,
+        ignore_index: int = -1,
+        **kwargs: Any,
+    ):
+        super().__init__(train_infos, text_columns, val_infos, **kwargs)
+        self.mlm_probability = mlm_probability
+        self.ignore_index = ignore_index
+
+    def setup(self, stage=None):
+        if self.tokenizer is None:
+            self.tokenizer = BertTokenizer.from_pretrained(TEXT_DEFAULT_TOKENIZER)
+        transform = partial(
+            encode_text_batch,
+            tokenizer=self.tokenizer,
+            padding="max_length",
+            max_length=self.max_length,
+            truncation=True,
+            return_tensors="pt",
+            return_special_tokens_mask=True,
+            text_columns=self.text_columns,
+            return_batch=False,
+        )
+        self.train_dataset = ISICDataset(self.train_dataset_infos[0]["csv_path"],
+                                         self.train_dataset_infos[0]["img_path"],
+                                         "mlm")
+        self.train_dataset.set_transform(transform)
+        self.val_dataset = ISICDataset(self.val_dataset_infos[0]["csv_path"],
+                                       self.val_dataset_infos[0]["img_path"],
+                                       "mlm")
         self.val_dataset.set_transform(transform)
 
     def _build_dataloader(self, dataset, drop_last=True, shuffle=True):
@@ -430,6 +558,223 @@ class VLDataModule(LightningDataModule):
             {"mlm_labels": mlm_labels, "text": text, "text_masked": text_masked}
         )
         return batch
+
+
+class ISICVLDataModule(LightningDataModule):
+    def __init__(
+        self,
+        train_infos: List[HFDatasetInfo],
+        val_infos: List[HFDatasetInfo],
+        text_transform: Optional[Callable] = None,
+        image_transforms: Optional[Tuple[Callable, Callable]] = None,
+        mlm_probablity: float = 0.15,
+        batch_size: int = 32,
+        num_workers: int = 4,
+        finetuning: bool = False,
+        ignore_index: int = -1,
+        itm_probability: float = 0.1,
+        allow_uneven_batches: bool = False,
+        fetch_num_threads: int = 4,
+        fetch_retries: int = 0,
+        fetch_sleep_timer: int = 0,
+        fetch_timeout: Optional[float] = None,
+        fetch_batch_size: int = 50,
+        **kwargs,
+    ):
+        super().__init__()
+
+        self.train_dataset_infos = train_infos
+        self.val_dataset_infos = val_infos
+        if self.val_dataset_infos is None:
+            self.val_dataset_infos = train_infos
+        if image_transforms is None:
+            if not finetuning:
+                image_transforms = default_image_pretraining_transforms()
+            else:
+                image_transforms = default_torchvision_transforms(use_dict=True)
+
+        self.train_image_transform, self.test_image_transform = image_transforms
+        self.text_transform = text_transform
+        self.mlm_probability = mlm_probablity
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.ignore_index = ignore_index
+        self.itm_probability = itm_probability
+        self.allow_uneven_batches = allow_uneven_batches
+        self.fetch_num_threads = fetch_num_threads
+        self.fetch_retries = fetch_retries
+        self.fetch_sleep_timer = fetch_sleep_timer
+        self.fetch_timeout = fetch_timeout
+        self.fetch_batch_size = fetch_batch_size
+
+    def setup(self, stage=None):
+        if self.text_transform is None:
+            # TODO Update to use whole word mask vocab
+            text_tokenizer = BertTokenizer.from_pretrained(
+                TEXT_WHOLE_WORD_MASK_TOKENIZER
+            )
+            self.text_transform = default_text_transform(
+                text_tokenizer, max_text_length=VL_MAX_LENGTH_DEFAULT
+            )
+        self.text_tokenizer = self.text_transform.keywords["tokenizer"]
+        train_vl_transform = VLTransform(
+            self.train_image_transform, self.text_transform
+        )
+        val_vl_transform = VLTransform(self.test_image_transform, self.text_transform)
+
+        self.train_dataset = ISICDataset(self.train_dataset_infos[0]["csv_path"],
+                                         self.train_dataset_infos[0]["img_path"],
+                                         self.train_dataset_infos[0]["mode"])
+        self.train_dataset.set_transform(
+            partial(
+                train_vl_transform,
+                dataset=self.train_dataset,
+                itm_probability=self.itm_probability,
+            )
+        )
+
+        self.val_dataset = ISICDataset(self.val_dataset_infos[0]["csv_path"],
+                                       self.val_dataset_infos[0]["img_path"],
+                                       self.val_dataset_infos[0]["mode"])
+        self.val_dataset.set_transform(
+            partial(
+                val_vl_transform,
+                dataset=self.val_dataset,  # Pass a copy to transform
+                itm_probability=self.itm_probability,
+            )
+        )
+
+    def train_dataloader(self):
+        return torch.utils.data.DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            sampler=None,
+            shuffle=True,
+            collate_fn=self._build_collator(),
+            # uneven batches can cause distributed issues,
+            # drop last batch to prevent those.
+            drop_last=True,
+        )
+
+    def val_dataloader(self):
+        return torch.utils.data.DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            sampler=None,
+            shuffle=False,
+            collate_fn=self._build_collator(),
+            # uneven batches can cause distributed issues,
+            # drop last batch to prevent those.
+            drop_last=True,
+        )
+
+    def _build_collator(self):
+        return DataCollatorForWholeWordMaskRetainingBatch(
+            self.text_tokenizer, mlm_probability=self.mlm_probability
+        )
+
+    def on_before_batch_transfer(self, batch, *args):
+        batch.pop("token_type_ids", None)
+        mask = batch.pop("attention_mask", None)
+        if (
+            mask is not None
+            and mask.size(0) < self.batch_size
+            and not self.allow_uneven_batches
+        ):
+            batch = pad_batch(batch, self.batch_size)
+        return batch
+
+    def on_after_batch_transfer(self, batch, *args):
+        text_masked = batch.pop("input_ids")
+        mlm_labels = batch.pop("labels", None)
+        mlm_labels[mlm_labels == -100] = self.ignore_index
+        text = text_masked.detach().clone()
+        text[mlm_labels != -1] = mlm_labels[mlm_labels != -1]
+        batch.update(
+            {"mlm_labels": mlm_labels, "text": text, "text_masked": text_masked}
+        )
+        return batch
+
+
+
+class ISICDataModule(LightningDataModule):
+    def __init__(
+        self,
+        train_infos: List[ISICInfo],
+        val_infos: Optional[List[ISICInfo]] = None,
+        transforms: Optional[Tuple[Callable, Callable]] = None,
+        batch_size: int = 32,
+        num_workers: int = 4,
+        allow_uneven_batches: bool = False,
+        **kwargs: Any,
+    ):
+        super().__init__()
+        self.train_dataset_infos = train_infos
+        self.val_dataset_infos = val_infos
+        if self.val_dataset_infos is None:
+            self.val_dataset_infos = train_infos
+
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.allow_uneven_batches = allow_uneven_batches
+
+        if transforms is None:
+            transforms = default_image_pretraining_transforms()
+
+        self.train_transform, self.test_transform = transforms
+
+    def setup(self, stage=None):
+        train_transform = self.train_transform
+        val_transform = self.test_transform
+
+        self.train_dataset = ISICDataset(self.train_dataset_infos[0]["csv_path"],
+                                         self.train_dataset_infos[0]["img_path"],
+                                         self.train_dataset_infos[0]["mode"])
+
+        self.train_dataset.set_transform(train_transform)
+        self.val_dataset = ISICDataset(self.val_dataset_infos[0]["csv_path"],
+                                       self.val_dataset_infos[0]["img_path"],
+                                       self.val_dataset_infos[0]["mode"])
+        self.val_dataset.set_transform(val_transform)
+
+    def train_dataloader(self):
+        return torch.utils.data.DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            sampler=None,
+            shuffle=True,
+            # uneven batches can cause distributed issues,
+            # drop last batch to prevent those.
+            # ideally, we don't need to drop these for unimodal cases
+            # but just to be safe
+            drop_last=True,
+        )
+
+    def val_dataloader(self):
+        return torch.utils.data.DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            sampler=None,
+            shuffle=False,
+            # uneven batches can cause distributed issues,
+            # drop last batch to prevent those.
+            # ideally, we don't need to drop these for unimodal cases
+            # but just to be safe
+            drop_last=True,
+        )
+
+    def test_dataloader(self):
+        return self.val_dataloader()
+
+    def on_before_batch_transfer(self, batch, *args):
+        if batch["label"].size(0) < self.batch_size and not self.allow_uneven_batches:
+            batch = pad_batch(batch, self.batch_size)
+        return batch
+
 
 
 class TorchVisionDataModule(LightningDataModule):

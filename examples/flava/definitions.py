@@ -5,7 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
+from pathlib import Path
 
 from omegaconf import MISSING
 
@@ -17,6 +18,13 @@ def _default_split_key_mapping():
 @dataclass
 class DatasetInfo:
     key: str = MISSING
+
+
+@dataclass
+class ISICInfo():
+    csv_path: str = MISSING
+    img_path: str = MISSING
+    mode: str = MISSING
 
 
 @dataclass
