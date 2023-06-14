@@ -2,25 +2,25 @@ _target_: flava.definitions.FLAVAArguments
 training:
   _target_: flava.definitions.TrainingArguments
   lightning:
-    max_steps: 450000
+    max_steps: 25350
     gpus: -1
-    val_check_interval: 10000
+    val_check_interval: 1000
     num_sanity_val_steps: 0
     strategy: ddp
   lightning_checkpoint:
-    dirpath: "."
+    dirpath: "/ext3/ckpts/"
     filename: flava-{epoch:02d}-{step}
     save_last: true
     every_n_train_steps: 1000
     save_on_train_epoch_end: true
     verbose: true
   lightning_load_from_checkpoint: null
-  seed: -1
-  batch_size: 8
+  seed: 77
+  batch_size: 16
   num_workers: 4
-  learning_rate: 2e-4
+  learning_rate: 1e-4
   adam_eps: 1e-8
-  adam_weight_decay: 1e-2
+  adam_weight_decay: 1e-6
   warmup_steps: 2000
 
 datasets:
@@ -31,27 +31,35 @@ datasets:
     _target_: flava.definitions.TrainingSingleDatasetInfo
     train:
       - _target_: flava.definitions.ISICInfo
-        csv_path: "/home/ravi/Documents/courses/healthcare/Research/train_split_metadata.csv"
-        img_path: "/home/ravi/Documents/courses/healthcare/Research/archive/train"
+        csv_path: "/ext3/train_split_metadata.csv"
+        img_path: "/ext3/train"
+        mode: "image"
+    val:
+      - _target_: flava.definitions.ISICInfo
+        csv_path: "/ext3/val_split_metadata.csv"
+        img_path: "/ext3/train"
         mode: "image"
   text:
     _target_: flava.definitions.TrainingSingleDatasetInfo
     train:
       - _target_: flava.definitions.ISICInfo
-        csv_path: "/home/ravi/Documents/courses/healthcare/Research/train_split_metadata.csv"
-        img_path: "/home/ravi/Documents/courses/healthcare/Research/archive/train"
+        csv_path: "/ext3/train_split_metadata.csv"
+        img_path: "/ext3/train"
         mode: "text"
-    datamodule_extra_kwargs:
-      text_columns: ["text"]
+    val:
+      - _target_: flava.definitions.ISICInfo
+        csv_path: "/ext3/val_split_metadata.csv"
+        img_path: "/ext3/train"
+        mode: "text"
   vl:
     _target_: flava.definitions.TrainingSingleDatasetInfo
     train:
       - _target_: flava.definitions.ISICInfo
-        csv_path: "/home/ravi/Documents/courses/healthcare/Research/train_split_metadata.csv"
-        img_path: "/home/ravi/Documents/courses/healthcare/Research/archive/train"
+        csv_path: "/ext3/train_split_metadata.csv"
+        img_path: "/ext3/train"
         mode: "vl"
     val:
       - _target_: flava.definitions.ISICInfo
-        csv_path: "/home/ravi/Documents/courses/healthcare/Research/val_split_metadata.csv"
-        img_path: "/home/ravi/Documents/courses/healthcare/Research/archive/train"
+        csv_path: "/ext3/val_split_metadata.csv"
+        img_path: "/ext3/train"
         mode: "vl"

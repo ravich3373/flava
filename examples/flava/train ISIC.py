@@ -69,11 +69,14 @@ def main():
     trainer = Trainer(
         **OmegaConf.to_container(config.training.lightning),
         callbacks=callbacks,
+        limit_val_batches = 0,
+        limit_test_batches=0,
+        limit_train_batches=25350,  #25*1014,
     )
     ckpt_path = config.training.lightning_load_from_checkpoint
 
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
-    trainer.validate(model, datamodule=datamodule)
+    #trainer.validate(model, datamodule=datamodule)
 
 
 if __name__ == "__main__":

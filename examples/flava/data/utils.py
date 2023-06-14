@@ -25,7 +25,7 @@ def build_datasets_from_info(dataset_infos: List[HFDatasetInfo], split: str = "t
         current_dataset = load_dataset(
             dataset_info.key,
             dataset_info.subset,
-            split=dataset_info.split_key_mapping[split],
+            split=dataset_info.split_key_mapping[split]+"[:128]",
             use_auth_token=True,
             **dataset_info.extra_kwargs,
         )

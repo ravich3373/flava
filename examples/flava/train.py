@@ -69,10 +69,18 @@ def main():
     trainer = Trainer(
         **OmegaConf.to_container(config.training.lightning),
         callbacks=callbacks,
+        limit_val_batches = 2,
+        limit_test_batches=2,
+        limit_train_batches=4,
     )
     ckpt_path = config.training.lightning_load_from_checkpoint
-
+    
+    import pdb; pdb.set_trace()
+    trainer.num_training_batches
+    trainer.num_val_batches
+    import pdb; pdb.set_trace()
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
+    import pdb; pdb.set_trace()
     trainer.validate(model, datamodule=datamodule)
 
 

@@ -42,6 +42,7 @@ from .utils import build_datasets_from_info, fetch_images
 
 def transform_image(transform, sample):
     sample.update(transform(sample["img"]))# image ravi
+    sample.pop("img")
     return sample
 
 
@@ -87,6 +88,8 @@ class ISICDataset(Dataset):
 
     def __getitem__(self, index):
         data = self.df.iloc[index].to_dict()
+        if(index%1000 == 0):
+            print(f"dataset idx: {index}\n")
         if "image" in data.keys():
             im_pth = os.path.join(self.img_dir, data['image'])
             img = Image.open(im_pth)
@@ -152,7 +155,7 @@ class ImageDataModule(LightningDataModule):
     def setup(self, stage=None):
         train_transform = partial(transform_image, self.train_transform)
         val_transform = partial(transform_image, self.test_transform)
-
+        
         self.train_dataset = build_datasets_from_info(
             self.train_dataset_infos, split="train"
         )

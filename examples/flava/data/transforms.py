@@ -66,7 +66,7 @@ def default_torchvision_transforms(
 
 
 def default_image_pretraining_transforms():
-    return FLAVAImageTransform(), FLAVAImageTransform(is_train=False)
+    return FLAVAImageTransform(encoder_input_size=384), FLAVAImageTransform(encoder_input_size=384, is_train=False)
 
 
 def default_text_transform(

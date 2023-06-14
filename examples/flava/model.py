@@ -52,7 +52,7 @@ class FLAVAPreTrainingLightningModule(LightningModule):
         **flava_pretraining_kwargs: Any,
     ):
         super().__init__()
-        self.model = flava_model_for_pretraining(**flava_pretraining_kwargs)
+        self.model = flava_model_for_pretraining(image_size=384, **flava_pretraining_kwargs)
         self.learning_rate = learning_rate
         self.adam_eps = adam_eps
         self.adam_betas = adam_betas

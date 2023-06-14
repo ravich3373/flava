@@ -2,11 +2,10 @@ _target_: flava.definitions.FLAVAArguments
 training:
   _target_: flava.definitions.TrainingArguments
   lightning:
-    max_steps: 450000
+    max_steps: 4
     gpus: -1
-    val_check_interval: 10000
+    val_check_interval: 4
     num_sanity_val_steps: 0
-    strategy: ddp
   lightning_checkpoint:
     dirpath: "."
     filename: flava-{epoch:02d}-{step}
@@ -16,7 +15,7 @@ training:
     verbose: true
   lightning_load_from_checkpoint: null
   seed: -1
-  batch_size: 8
+  batch_size: 64
   num_workers: 4
   learning_rate: 2e-4
   adam_eps: 1e-8
