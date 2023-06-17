@@ -11,25 +11,29 @@ import pandas as pd
 from flava.model import FLAVAPreTrainingLightningModule
 from flava.data.datamodules import ISICDataset
 from flava.data.transforms import default_image_pretraining_transforms
+from tqdm import tqdm
+import pickle
+import torch.nn as nn
 
 
 def main():
     tokernizer = BertTokenizer.from_pretrained("bert-base-uncased")
-    a = torch.load("flava-epoch=00-step=21000.ckpt", map_location=torch.device('cpu'))
+    a = torch.load("/scratch/rc5124/ckpts_vl/last.ckpt",) #map_location=torch.device('cpu'))
 
     m = FLAVAPreTrainingLightningModule()
     m.load_state_dict(a['state_dict'])
-
-    ds = ISICDataset("/home/ravi/Documents/courses/healthcare/Research/test_data.csv",
-                 "/home/ravi/Documents/courses/healthcare/Research/archive/train",
+    m.to("cuda:0")
+    m.eval()
+    ds = ISICDataset("/ext3/flava/examples/flava/dataset/test_data.csv",
+                 "/ext3/train",
                  "image",
                   True)
     tfms = default_image_pretraining_transforms()[1]
     ds.set_transform(tfms)
     dl = torch.utils.data.DataLoader(
                 ds,
-                batch_size=1,
-                num_workers=1,
+                batch_size=32,
+                num_workers=4,
                 sampler=None,
                 shuffle=False,
                 # collate_fn=_build_collator(),
@@ -42,9 +46,14 @@ def main():
     embeddings = []
     labels = []
     file_paths = []
-    for data in dl:
-        r = m._step(data, 1)
-        embeds = m.model.model.image_encoder(data['image']).last_hidden_state[:, 0].detach().cpu().squeeze().numpy()
+    for data in tqdm(dl):
+        for key, val in data.items():
+            if type(val) == torch.Tensor:
+                data[key] = val.to("cuda:0")
+
+        #r = m._step(data, 1)
+        embeds = m.model.model.image_encoder(data['image']).last_hidden_state[:, 0].squeeze()
+        embeds = nn.functional.normalize(embeds, dim=1, p=2).detach().cpu().numpy()
         y = data['label'].detach().cpu().numpy()
         im_pths = data['img_pth']
 
@@ -52,16 +61,22 @@ def main():
         labels.append(y)
         file_paths.extend(im_pths)
     
-    embeddings = np.vstack(embeddings)
-    labels = np.vstack(labels)
-
-    embed_2d = TSNE(n_components=2, learning_rate='auto',
-                   init='random', perplexity=3).fit_transform(embeddings)
+    import pdb; pdb.set_trace()
+    embeddings = np.concatenate(embeddings)
+    labels = np.concatenate(labels)
+    
+    embed_2d = TSNE(n_components=3, learning_rate='auto',
+                   init='random', perplexity=40).fit_transform(embeddings)
     
     dict = {"embeddings": embeddings,
             "labels": labels,
             "image": file_paths,
             "embed_2d": embed_2d}
     
-    df = pd.DataFrame.from_dict(dict)
-    df.to_csv("infer_tsne.csv")
+    # df = pd.DataFrame.from_dict(dict)
+    #df.to_csv("infer_tsne.csv")
+    with open("tsne.pkl", "wb") as fp:
+        pickle.dump(dict, fp)
+
+if __name__ == "__main__":
+    main()
