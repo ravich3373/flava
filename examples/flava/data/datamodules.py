@@ -50,8 +50,10 @@ class ISICDataset(Dataset):
     def __init__(self,
                  csv_path: Union[Path, str],
                  img_path: Union[Path, str],
-                 mode):
+                 mode,
+                 ret_img_pth = False):
         super().__init__()
+        self.ret_img_pth = ret_img_pth
         self.cols = ["image_name", "diagnosis", "description"]
         self.df = pd.read_csv(csv_path, usecols=self.cols)
         self.img_dir = img_path
@@ -92,6 +94,8 @@ class ISICDataset(Dataset):
             im_pth = os.path.join(self.img_dir, data['image'])
             img = Image.open(im_pth)
             data['image'] = img
+            if self.ret_img_pth:
+                data['img_pth'] = im_pth
 
         if self.mode == "image" and self.transforms is not None:
             data.update(self.transforms(img))                
