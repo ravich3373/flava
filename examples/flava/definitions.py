@@ -93,6 +93,8 @@ class ModelArguments:
 
 @dataclass
 class FLAVAArguments:
+    pre_init_path: List[str] = MISSING
+    pre_train_type: List[str] = MISSING
     datasets: TrainingDatasetsInfo = TrainingDatasetsInfo()
     training: TrainingArguments = TrainingArguments()
     model: ModelArguments = ModelArguments()

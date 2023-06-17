@@ -66,7 +66,7 @@ def default_torchvision_transforms(
 
 
 def default_image_pretraining_transforms():
-    return FLAVAImageTransform(encoder_input_size=384), FLAVAImageTransform(encoder_input_size=384, is_train=False)
+    return FLAVAImageTransform(encoder_input_size=384,mask_window_size=24, codebook_input_size=192), FLAVAImageTransform(encoder_input_size=384,mask_window_size=24, codebook_input_size=192, is_train=False)
 
 
 def default_text_transform(
@@ -110,9 +110,10 @@ def pad_batch(batch, batch_size):
 
 
 class VLTransform:
-    def __init__(self, image_transform, text_transform):
+    def __init__(self, image_transform, text_transform, unnest=False):
         self.image_transform = image_transform
         self.text_transform = text_transform
+        self.unnest = unnest
 
     def __call__(self, info, dataset, itm_probability):
         output = {}
@@ -126,6 +127,14 @@ class VLTransform:
                 text = dataset.select([random.randint(0, len(dataset) - 1)])[0]["text"]
             output["itm_labels"] = torch.zeros((1), dtype=torch.long)
 
+        if self.unnest: # ravi needed to work with unnest
+            text = [text]
+            image = [image]
         output.update(self.image_transform(image))
         output.update(self.text_transform(text))
+        if self.unnest:
+            return self.unnester(output)
         return output
+
+    def unnester(self, py_dict):
+        return {key: array[0] for key, array in py_dict.items()}

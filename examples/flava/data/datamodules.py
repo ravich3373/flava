@@ -88,8 +88,6 @@ class ISICDataset(Dataset):
 
     def __getitem__(self, index):
         data = self.df.iloc[index].to_dict()
-        if(index%1000 == 0):
-            print(f"dataset idx: {index}\n")
         if "image" in data.keys():
             im_pth = os.path.join(self.img_dir, data['image'])
             img = Image.open(im_pth)
@@ -621,9 +619,9 @@ class ISICVLDataModule(LightningDataModule):
             )
         self.text_tokenizer = self.text_transform.keywords["tokenizer"]
         train_vl_transform = VLTransform(
-            self.train_image_transform, self.text_transform
+            self.train_image_transform, self.text_transform, unnest=True
         )
-        val_vl_transform = VLTransform(self.test_image_transform, self.text_transform)
+        val_vl_transform = VLTransform(self.test_image_transform, self.text_transform, unnest=True)
 
         self.train_dataset = ISICDataset(self.train_dataset_infos[0]["csv_path"],
                                          self.train_dataset_infos[0]["img_path"],

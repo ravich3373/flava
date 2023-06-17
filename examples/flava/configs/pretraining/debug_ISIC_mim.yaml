@@ -2,19 +2,19 @@ _target_: flava.definitions.FLAVAArguments
 training:
   _target_: flava.definitions.TrainingArguments
   lightning:
-    max_steps: 6084
+    max_steps: 25350
     gpus: -1
-    val_check_interval: 1000
+    val_check_interval: 1014
     num_sanity_val_steps: 0
     strategy: ddp
   lightning_checkpoint:
-    dirpath: "/ext3/ckpts/"
+    dirpath: "/ext3/ckpts_mim/"
     filename: flava-{epoch:02d}-{step}
     save_last: true
     every_n_train_steps: 1000
     save_on_train_epoch_end: true
     verbose: true
-  lightning_load_from_checkpoint: null
+  lightning_load_from_checkpoint: "/ext3/ckpts_mim/last.ckpt"
   seed: 77
   batch_size: 16
   num_workers: 4
@@ -26,8 +26,6 @@ training:
 datasets:
   _target_: flava.definitions.TrainingDatasetsInfo
   selected:
-  - vl
-  - text
   - image
   image:
     _target_: flava.definitions.TrainingSingleDatasetInfo

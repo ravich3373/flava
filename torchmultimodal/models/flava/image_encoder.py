@@ -146,7 +146,7 @@ class ImageEmbeddings(nn.Module):
         embeddings = self.patch_embeddings(
             pixel_values, interpolate_pos_encoding=interpolate_pos_encoding
         )
-
+        import pdb; pdb.set_trace()
         _, seq_len, _ = embeddings.size()
         if image_patches_mask is not None:
             if self.mask_token is not None:

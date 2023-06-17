@@ -13,7 +13,23 @@ from flava.utils import build_config, build_datamodule_kwargs
 from omegaconf import OmegaConf
 from pytorch_lightning import seed_everything, Trainer
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+import torch
 
+
+mim_weights = ["model.model.image_encoder", "model.image_encoder",
+               "model.model.image_projection", "model.image_projection",
+               "model.image_codebook", "image_codebook"]
+mlm_weights = ["model.model.text_encoder", "model.text_encoder",
+               "model.model.text_projection", "model.text_projection"]
+vl_weights = mim_weights+\
+             mlm_weights+\
+             ["model.model.mm_encoder", "model.mm_encoder",
+              "model.model.image_to_mm_projection", "model.image_to_mm_projection",
+              "model.model.text_to_mm_projection", "model.text_to_mm_projection"]
+
+pre_train_2_layers =  {"mim": mim_weights,
+                       "mlm": mlm_weights,
+                       "vl": vl_weights}
 
 def main():
     config: FLAVAArguments = build_config()
@@ -56,7 +72,8 @@ def main():
 
     callbacks = [
         LearningRateMonitor(logging_interval="step"),
-        MultimodalEvalCallback(imagenet_datamodule=imagenet_datamodule),
+        #MultimodalEvalCallback(imagenet_datamodule=imagenet_datamodule), ravi
+        # commented out since for MLM training imagenet dataset is not setup('fit') and causes issues
     ]
 
     if config.training.lightning_checkpoint is not None:
@@ -69,11 +86,29 @@ def main():
     trainer = Trainer(
         **OmegaConf.to_container(config.training.lightning),
         callbacks=callbacks,
-        limit_val_batches = 0,
+        limit_val_batches = 254,
         limit_test_batches=0,
         limit_train_batches=25350,  #25*1014,
     )
     ckpt_path = config.training.lightning_load_from_checkpoint
+    
+    if "pre_init_path" in config and "pre_train_type" in config:
+        assert (ckpt_path is None or config.pre_init_path is None)
+        sel_dict = {}
+        for fpth, pre_train_type in zip(config.pre_init_path, config.pre_train_type):
+            pre_train_layers = pre_train_2_layers[pre_train_type]
+            w = torch.load(fpth)
+        
+            if 'state_dict' not in w.keys():    # patching to rectify different naming conventions
+                a = w
+                w = {}
+                w['state_dict'] = a
+            for key, val in w['state_dict'].items():
+                for sel_tok in pre_train_layers:
+                    if sel_tok in key:
+                        sel_dict[key] = val
+                        break
+        model.load_state_dict(sel_dict, strict=False)
 
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
     #trainer.validate(model, datamodule=datamodule)
