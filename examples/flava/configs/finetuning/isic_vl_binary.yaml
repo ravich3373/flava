@@ -1,0 +1,80 @@
+# Note that in original FLAVA paper, only Logistic Regression numbers were provided for image datasets.
+_target_: flava.definitions.FLAVAArguments
+init_path: "/scratch/rc5124/ckpts_vl/last.ckpt"
+training:
+  _target_: flava.definitions.TrainingArguments
+  lightning:
+    max_steps: 25350
+    gpus: -1
+    val_check_interval: 1013
+    num_sanity_val_steps: 0
+    strategy: ddp
+  lightning_checkpoint:
+    dirpath: "/scratch/rc5124/ft_vl"
+    filename: flava-{epoch:02d}-{step}
+    save_last: true
+    save_top_k: 1
+    #every_n_train_steps: 30 #1000
+    every_n_epochs: 1 # remove ravi
+    save_on_train_epoch_end: true
+    verbose: true
+    monitor: validation/accuracy/classification
+    mode: max
+  lightning_load_from_checkpoint: null
+  seed: 77
+  batch_size: 16
+  num_workers: 4
+  learning_rate: 1e-4
+  adam_eps: 1e-6
+  adam_weight_decay: 0.1
+  adam_betas:
+  - 0.9
+  - 0.98
+  warmup_steps: 2028
+
+datasets:
+  _target_: flava.definitions.TrainingDatasetsInfo
+  selected:
+  - vl
+  num_classes: 2
+  image:
+    _target_: flava.definitions.TrainingSingleDatasetInfo
+    train:
+      - _target_: flava.definitions.ISICInfo
+        csv_path: "/ext3/train_split_metadata.csv"
+        img_path: "/ext3/train"
+        mode: "image"
+    val:
+      - _target_: flava.definitions.ISICInfo
+        csv_path: "/ext3/val_split_metadata.csv"
+        img_path: "/ext3/train"
+        mode: "image"
+  text:
+    _target_: flava.definitions.TrainingSingleDatasetInfo
+    train:
+      - _target_: flava.definitions.ISICInfo
+        csv_path: "/ext3/train_split_metadata.csv"
+        img_path: "/ext3/train"
+        mode: "text"
+    val:
+      - _target_: flava.definitions.ISICInfo
+        csv_path: "/ext3/val_split_metadata.csv"
+        img_path: "/ext3/train"
+        mode: "text"
+  vl:
+    _target_: flava.definitions.TrainingSingleDatasetInfo
+    train:
+      - _target_: flava.definitions.ISICInfo
+        csv_path: "/ext3/train_split_metadata.csv"
+        img_path: "/ext3/train"
+        mode: "vl"
+    val:
+      - _target_: flava.definitions.ISICInfo
+        csv_path: "/ext3/val_split_metadata.csv"
+        img_path: "/ext3/train"
+        mode: "vl"
+    test:
+      - _target_: flava.definitions.ISICInfo
+        csv_path: "/ext3/test_data.csv"
+        img_path: "/ext3/train"
+        mode: "vl"
