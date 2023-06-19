@@ -52,41 +52,57 @@ class ISICDataset(Dataset):
                  img_path: Union[Path, str],
                  mode,
                  ret_img_pth = False,
-                 no_dict = False):
+                 no_dict = False,
+                 binary=False):
         super().__init__()
         self.ret_img_pth = ret_img_pth
         self.no_dict = no_dict
-        self.cols = ["image_name", "diagnosis", "description"]
+        if not binary:
+            self.cols = ["image_name", "diagnosis", "description"]
+        else:
+            self.cols = ["image_name", "benign_malignant", "description"]
         self.df = pd.read_csv(csv_path, usecols=self.cols)
         self.img_dir = img_path
         self.transforms = None
         self.mode = mode
-        self.label_num2str = {0: 'NV',
-                              1: 'MEL',
-                              2: 'BCC',
-                              3: 'BKL',
-                              4: 'AK',
-                              5: 'SCC',
-                              6: 'VASC',
-                              7: 'DF'}
-        self.label_str2num = {'NV': 0,
-                              'MEL':1,
-                              'BCC':2,
-                              'BKL':3,
-                              'AK':4,
-                              'SCC':5,
-                              'VASC':6,
-                              'DF':7}
-        self.df['diagnosis'] = self.df["diagnosis"].apply(lambda l: self.label_str2num[l])
+        if not binary:
+            self.label_num2str = {0: 'NV',
+                                1: 'MEL',
+                                2: 'BCC',
+                                3: 'BKL',
+                                4: 'AK',
+                                5: 'SCC',
+                                6: 'VASC',
+                                7: 'DF'}
+            self.label_str2num = {'NV': 0,
+                                'MEL':1,
+                                'BCC':2,
+                                'BKL':3,
+                                'AK':4,
+                                'SCC':5,
+                                'VASC':6,
+                                'DF':7}
+        else:
+            self.label_num2str = {0: 'benign',
+                                  1: 'malignant'}
+            self.label_str2num = {'benign': 0,
+                                  'malignant':1}
+        if not binary:
+            y_col = "diagnosis"
+        else:
+            y_col = "benign_malignant"
+
+        self.df[y_col] = self.df[y_col].apply(lambda l: self.label_str2num[l])
+
         if mode == "text":
-            self.df = self.df[["diagnosis", "description"]]
+            self.df = self.df[[y_col, "description"]]
         elif mode == "image":
-            self.df = self.df[["diagnosis", "image_name"]]
+            self.df = self.df[[y_col, "image_name"]]
         elif mode == "mlm":
             self.df = self.df[["description"]]
         
         d = {"image_name": "image",
-             "diagnosis": "label",
+             y_col: "label",
              "description": "text"}
         self.df.rename(mapper=d, axis=1, inplace=True)
 
