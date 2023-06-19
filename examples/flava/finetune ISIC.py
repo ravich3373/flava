@@ -44,6 +44,7 @@ def main():
         datamodule = ISICVLDataModule(
             **build_datamodule_kwargs(config.datasets.vl, config.training),
             finetuning=True,
+            itm_probability=-1  # ravi dont want to mismatch images and texts.
         )
 
     datamodule.setup("fit")
