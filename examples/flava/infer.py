@@ -16,33 +16,7 @@ import pickle
 import torch.nn as nn
 
 
-def main():
-    tokernizer = BertTokenizer.from_pretrained("bert-base-uncased")
-    a = torch.load("/scratch/rc5124/ckpts_vl/last.ckpt",) #map_location=torch.device('cpu'))
-
-    m = FLAVAPreTrainingLightningModule()
-    m.load_state_dict(a['state_dict'])
-    m.to("cuda:0")
-    m.eval()
-    ds = ISICDataset("/ext3/flava/examples/flava/dataset/test_data.csv",
-                 "/ext3/train",
-                 "image",
-                  True)
-    tfms = default_image_pretraining_transforms()[1]
-    ds.set_transform(tfms)
-    dl = torch.utils.data.DataLoader(
-                ds,
-                batch_size=32,
-                num_workers=4,
-                sampler=None,
-                shuffle=False,
-                # collate_fn=_build_collator(),
-                # uneven batches can cause distributed issues,
-                # drop last batch to prevent those.
-                drop_last=False,
-            )
-    to_pil = ToPILImage()
-
+def infer(m, dl):
     embeddings = []
     labels = []
     file_paths = []
@@ -60,8 +34,7 @@ def main():
         embeddings.append(embeds)
         labels.append(y)
         file_paths.extend(im_pths)
-    
-    import pdb; pdb.set_trace()
+
     embeddings = np.concatenate(embeddings)
     labels = np.concatenate(labels)
     
@@ -73,10 +46,66 @@ def main():
             "image": file_paths,
             "embed_2d": embed_2d}
     
+    return data
+
+
+def main():
+    tokernizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    a = torch.load("/scratch/rc5124/ckpts_vl/last.ckpt",) #map_location=torch.device('cpu'))
+
+    m = FLAVAPreTrainingLightningModule()
+    m.load_state_dict(a['state_dict'])
+    m.to("cuda:0")
+    m.eval()
+
+    ds = ISICDataset("/ext3/flava/examples/flava/dataset/test_data.csv",
+                 "/ext3/train",
+                 "image",
+                  True)
+    
+    train_ds = ISICDataset("/ext3/train.csv",
+                            "/ext3/train",
+                            "image",
+                            True)
+    tfms = default_image_pretraining_transforms()[1]
+    ds.set_transform(tfms)
+    train_ds.set_transform(tfms)
+    dl = torch.utils.data.DataLoader(
+                ds,
+                batch_size=32,
+                num_workers=4,
+                sampler=None,
+                shuffle=False,
+                # collate_fn=_build_collator(),
+                # uneven batches can cause distributed issues,
+                # drop last batch to prevent those.
+                drop_last=False,
+            )
+    train_dl = torch.utils.data.DataLoader(
+                train_ds,
+                batch_size=32,
+                num_workers=4,
+                sampler=None,
+                shuffle=False,
+                # collate_fn=_build_collator(),
+                # uneven batches can cause distributed issues,
+                # drop last batch to prevent those.
+                drop_last=False,
+            )
+    to_pil = ToPILImage()
+
+    train_data = infer(m, train_dl)
+    test_data = infer(m, dl)
+    
     # df = pd.DataFrame.from_dict(dict)
     #df.to_csv("infer_tsne.csv")
-    with open("tsne.pkl", "wb") as fp:
-        pickle.dump(dict, fp)
+    with open("/scratch/rc5124/train_tsne.pkl", "wb") as fp:
+        pickle.dump(train_data, fp)
+
+    with open("/scratch/rc5124/test_tsne.pkl", "wb") as fp:
+        pickle.dump(test_data, fp)
+    
+    
 
 if __name__ == "__main__":
     main()

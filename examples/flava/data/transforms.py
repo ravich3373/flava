@@ -38,7 +38,7 @@ def encode_text_batch(
     return tokens
 
 
-def transform_image_dict(transform, image_dict, *args, **kwargs):
+def transform_image_dict(image_dict, transform, *args, **kwargs):
     return {"image": transform(image_dict["image"], *args, **kwargs)}
 
 
@@ -110,10 +110,11 @@ def pad_batch(batch, batch_size):
 
 
 class VLTransform:
-    def __init__(self, image_transform, text_transform, unnest=False):
+    def __init__(self, image_transform, text_transform, unnest=False, use_dict=False):
         self.image_transform = image_transform
         self.text_transform = text_transform
         self.unnest = unnest
+        self.use_dict = use_dict
 
     def __call__(self, info, dataset, itm_probability):
         output = {}
@@ -129,12 +130,26 @@ class VLTransform:
 
         if self.unnest: # ravi needed to work with unnest
             text = [text]
-            image = [image]
-        output.update(self.image_transform(image))
+            if not self.use_dict:
+                image = [image]
+        if self.use_dict:
+            output.update({"image": self.image_transform(image)})
+        else:
+            output.update(self.image_transform(image))
+        output["labels"] = torch.Tensor([info["label"]]).long()
         output.update(self.text_transform(text))
         if self.unnest:
             return self.unnester(output)
         return output
 
     def unnester(self, py_dict):
-        return {key: array[0] for key, array in py_dict.items()}
+        if not self.use_dict:
+            return {key: array[0] for key, array in py_dict.items()}
+        else:
+            ret = {}
+            for key, array in py_dict.items():
+                if key == "image":
+                    ret[key] = array
+                else:
+                    ret[key] = array[0]
+            return ret

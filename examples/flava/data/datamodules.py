@@ -51,9 +51,11 @@ class ISICDataset(Dataset):
                  csv_path: Union[Path, str],
                  img_path: Union[Path, str],
                  mode,
-                 ret_img_pth = False):
+                 ret_img_pth = False,
+                 no_dict = False):
         super().__init__()
         self.ret_img_pth = ret_img_pth
+        self.no_dict = no_dict
         self.cols = ["image_name", "diagnosis", "description"]
         self.df = pd.read_csv(csv_path, usecols=self.cols)
         self.img_dir = img_path
@@ -103,6 +105,11 @@ class ISICDataset(Dataset):
             return self.transforms(data)
         elif self.mode == "vl" and self.transforms is not None:
             return self.transforms(data)
+        
+        # ret = [None, None]
+        if self.no_dict: # setup only for image
+            ret = (data['image'], data["label"])
+            return ret
         return data
 
     def __len__(self):
@@ -118,13 +125,17 @@ class ISICDataset(Dataset):
 
 
 class DataCollatorForWholeWordMaskRetainingBatch(DataCollatorForWholeWordMask):
+    def __init__(self, text_tokenizer, mlm_probability, finetune=False):
+        super().__init__(text_tokenizer, mlm_probability=mlm_probability)
+        self.finetune = finetune
     def torch_call(
         self, examples: List[Union[List[int], Any, Dict[str, Any]]]
     ) -> Dict[str, Any]:
         masked_batch = super().torch_call(examples)
         examples = torch_default_data_collator(examples)
         examples["input_ids"] = masked_batch["input_ids"]
-        examples["labels"] = masked_batch["labels"]
+        if not self.finetune:
+            examples["labels"] = masked_batch["labels"]
         return examples
 
 
@@ -570,6 +581,7 @@ class ISICVLDataModule(LightningDataModule):
         self,
         train_infos: List[HFDatasetInfo],
         val_infos: List[HFDatasetInfo],
+        test_infos: List[HFDatasetInfo] = None,
         text_transform: Optional[Callable] = None,
         image_transforms: Optional[Tuple[Callable, Callable]] = None,
         mlm_probablity: float = 0.15,
@@ -592,11 +604,13 @@ class ISICVLDataModule(LightningDataModule):
         self.val_dataset_infos = val_infos
         if self.val_dataset_infos is None:
             self.val_dataset_infos = train_infos
+
+        self.test_dataset_infos = test_infos
         if image_transforms is None:
             if not finetuning:
                 image_transforms = default_image_pretraining_transforms()
             else:
-                image_transforms = default_torchvision_transforms(use_dict=True)
+                image_transforms = default_torchvision_transforms(size=(384, 384))
 
         self.train_image_transform, self.test_image_transform = image_transforms
         self.text_transform = text_transform
@@ -623,13 +637,14 @@ class ISICVLDataModule(LightningDataModule):
             )
         self.text_tokenizer = self.text_transform.keywords["tokenizer"]
         train_vl_transform = VLTransform(
-            self.train_image_transform, self.text_transform, unnest=True
+            self.train_image_transform, self.text_transform, use_dict=True, unnest=True
         )
-        val_vl_transform = VLTransform(self.test_image_transform, self.text_transform, unnest=True)
+        val_vl_transform = VLTransform(self.test_image_transform, self.text_transform, use_dict=True, unnest=True)
 
         self.train_dataset = ISICDataset(self.train_dataset_infos[0]["csv_path"],
                                          self.train_dataset_infos[0]["img_path"],
-                                         self.train_dataset_infos[0]["mode"])
+                                         self.train_dataset_infos[0]["mode"],
+                                         no_dict=False)
         self.train_dataset.set_transform(
             partial(
                 train_vl_transform,
@@ -637,10 +652,10 @@ class ISICVLDataModule(LightningDataModule):
                 itm_probability=self.itm_probability,
             )
         )
-
         self.val_dataset = ISICDataset(self.val_dataset_infos[0]["csv_path"],
                                        self.val_dataset_infos[0]["img_path"],
-                                       self.val_dataset_infos[0]["mode"])
+                                       self.val_dataset_infos[0]["mode"],
+                                       no_dict=False)
         self.val_dataset.set_transform(
             partial(
                 val_vl_transform,
@@ -648,6 +663,19 @@ class ISICVLDataModule(LightningDataModule):
                 itm_probability=self.itm_probability,
             )
         )
+
+        if self.test_dataset_infos:
+            self.test_dataset = ISICDataset(self.test_dataset_infos[0]["csv_path"],
+                                            self.test_dataset_infos[0]["img_path"],
+                                            self.test_dataset_infos[0]["mode"],
+                                            no_dict=False)
+            self.test_dataset.set_transform(
+                partial(
+                    val_vl_transform,
+                    dataset=self.test_dataset,  # Pass a copy to transform
+                    itm_probability=self.itm_probability,
+                )
+            )
 
     def train_dataloader(self):
         return torch.utils.data.DataLoader(
@@ -677,7 +705,7 @@ class ISICVLDataModule(LightningDataModule):
 
     def _build_collator(self):
         return DataCollatorForWholeWordMaskRetainingBatch(
-            self.text_tokenizer, mlm_probability=self.mlm_probability
+            self.text_tokenizer, mlm_probability=self.mlm_probability, finetune=True
         )
 
     def on_before_batch_transfer(self, batch, *args):
@@ -691,16 +719,16 @@ class ISICVLDataModule(LightningDataModule):
             batch = pad_batch(batch, self.batch_size)
         return batch
 
-    def on_after_batch_transfer(self, batch, *args):
-        text_masked = batch.pop("input_ids")
-        mlm_labels = batch.pop("labels", None)
-        mlm_labels[mlm_labels == -100] = self.ignore_index
-        text = text_masked.detach().clone()
-        text[mlm_labels != -1] = mlm_labels[mlm_labels != -1]
-        batch.update(
-            {"mlm_labels": mlm_labels, "text": text, "text_masked": text_masked}
-        )
-        return batch
+    # def on_after_batch_transfer(self, batch, *args):
+    #     text_masked = batch.pop("input_ids")
+    #     mlm_labels = batch.pop("labels", None)
+    #     mlm_labels[mlm_labels == -100] = self.ignore_index
+    #     text = text_masked.detach().clone()
+    #     text[mlm_labels != -1] = mlm_labels[mlm_labels != -1]
+    #     batch.update(
+    #         {"mlm_labels": mlm_labels, "text": text, "text_masked": text_masked}
+    #     )
+    #     return batch
 
 
 
@@ -859,6 +887,78 @@ class TorchVisionDataModule(LightningDataModule):
             dataset = self.val_dataset
         else:
             dataset = self.test_dataset
+
+        return self._build_dataloader(dataset, shuffle=False)
+
+    def test_dataloader(self):
+        return self._build_dataloader(self.test_dataset, shuffle=False)
+
+    def _build_dataloader(self, dataset: torch.utils.data.Dataset, shuffle=True):
+        return torch.utils.data.DataLoader(
+            dataset,
+            shuffle=shuffle,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+    def on_before_batch_transfer(self, batch, *args):
+        images, targets = batch
+        batch = {"image": images, "labels": targets}
+        return batch
+
+
+class ISICTorchVisionDataModule(LightningDataModule):
+    def __init__(
+        self,
+        train_infos: List[ISICInfo],
+        # Val info is not used for torchvision datamodule, but kept to keep things consistent
+        val_infos: Optional[List[ISICInfo]] = None,
+        test_infos: Optional[List[ISICInfo]] = None,
+        image_transforms: Optional[Tuple[Callable, Callable]] = None,
+        batch_size: int = 32,
+        num_workers: int = 4,
+        **kwargs: Any,
+    ):
+        super().__init__()
+        self.train_info = train_infos
+        if val_infos is None:
+            val_infos = train_infos
+        self.val_info = val_infos
+        self.test_info = test_infos
+
+        if image_transforms is None:
+            image_transforms = default_torchvision_transforms()
+
+        self.train_transform, self.test_transform = image_transforms
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+    def setup(self, stage=None):
+        train_transform = self.train_transform
+        val_transform = self.test_transform
+
+        self.train_dataset = ISICDataset(self.train_infos[0]["csv_path"],
+                                         self.train_infos[0]["img_path"],
+                                         self.train_infos[0]["mode"],
+                                         no_dict=True)
+
+        self.train_dataset.set_transform(train_transform)
+        self.val_dataset = ISICDataset(self.val_infos[0]["csv_path"],
+                                       self.val_infos[0]["img_path"],
+                                       self.val_infos[0]["mode"],
+                                       no_dict=True)
+        self.val_dataset.set_transform(val_transform)
+        self.test_dataset = ISICDataset(self.test_infos[0]["csv_path"],
+                                        self.test_infos[0]["img_path"],
+                                        self.test_infos[0]["mode"],
+                                        no_dict=True)
+        self.test_dataset.set_transform(val_transform)
+
+    def train_dataloader(self):
+        return self._build_dataloader(self.train_dataset)
+
+    def val_dataloader(self):
+        dataset = self.val_dataset
 
         return self._build_dataloader(dataset, shuffle=False)
 

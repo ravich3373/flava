@@ -55,6 +55,7 @@ class TorchVisionDatasetInfo(DatasetInfo):
 class TrainingSingleDatasetInfo:
     train: List[DatasetInfo] = field(default_factory=lambda: [HFDatasetInfo()])
     val: Optional[List[DatasetInfo]] = None
+    test: Optional[List[DatasetInfo]] = None
     batch_size: Optional[int] = None
     num_workers: Optional[int] = None
     allow_uneven_batches: bool = False

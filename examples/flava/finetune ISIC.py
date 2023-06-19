@@ -4,8 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from flava.data import TextDataModule, TorchVisionDataModule
-from flava.data.datamodules import VLDataModule
+from flava.data import TextDataModule, TorchVisionDataModule, ISICTorchVisionDataModule
+from flava.data.datamodules import ISICVLDataModule
 from flava.definitions import FLAVAArguments
 from flava.model import FLAVAClassificationLightningModule
 from flava.utils import build_config, build_datamodule_kwargs
@@ -29,22 +29,23 @@ def main():
 
     assert len(config.datasets.selected) == 1
     if "image" in config.datasets.selected:
-        datamodule = TorchVisionDataModule(
+        datamodule = ISICTorchVisionDataModule(
             **build_datamodule_kwargs(config.datasets.image, config.training)
         )
-    elif "text":
-        datamodule = TextDataModule(
-            **build_datamodule_kwargs(config.datasets.text, config.training)
-        )
+    # elif "text":
+    #     datamodule = TextDataModule(
+    #         **build_datamodule_kwargs(config.datasets.text, config.training)
+    #     )
     else:
-        datamodule = VLDataModule(
+        datamodule = ISICVLDataModule(
             **build_datamodule_kwargs(config.datasets.vl, config.training),
             finetuning=True,
         )
 
     datamodule.setup("fit")
 
-    
+    for data in datamodule.train_dataloader():
+        break
     model = FLAVAClassificationLightningModule(
         num_classes=config.datasets.num_classes,
         learning_rate=config.training.learning_rate,
@@ -68,7 +69,10 @@ def main():
         )
 
     trainer = Trainer(
-        **OmegaConf.to_container(config.training.lightning), callbacks=callbacks
+        **OmegaConf.to_container(config.training.lightning), callbacks=callbacks,
+        limit_val_batches = 254,
+        limit_test_batches=317,
+        limit_train_batches=25350,  #25*1014,
     )
     ckpt_path = config.training.lightning_load_from_checkpoint
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)

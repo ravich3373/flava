@@ -132,7 +132,7 @@ class FLAVAClassificationLightningModule(LightningModule):
     ):
         super().__init__()
         self.model = flava_model_for_classification(
-            num_classes, **flava_classification_kwargs
+            num_classes, image_size=384, **flava_classification_kwargs
         )
         self.learning_rate = learning_rate
         self.adam_eps = adam_eps
@@ -140,7 +140,7 @@ class FLAVAClassificationLightningModule(LightningModule):
         self.warmup_steps = warmup_steps
         self.max_steps = max_steps
         self.adam_betas = adam_betas
-        self.metrics = Accuracy()
+        self.metrics = Accuracy(task="multiclass", num_classes=num_classes)
 
     def training_step(self, batch, batch_idx):
         output, accuracy = self._step(batch, batch_idx)
