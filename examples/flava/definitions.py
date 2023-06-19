@@ -94,8 +94,9 @@ class ModelArguments:
 
 @dataclass
 class FLAVAArguments:
-    pre_init_path: List[str] = MISSING
-    pre_train_type: List[str] = MISSING
+    pre_init_path: List[str] = MISSING  # init part/whole of model for pretraining
+    pre_train_type: List[str] = MISSING # init part/whole of model for pretraining
+    init_path: str = MISSING    # init model for finetuning
     datasets: TrainingDatasetsInfo = TrainingDatasetsInfo()
     training: TrainingArguments = TrainingArguments()
     model: ModelArguments = ModelArguments()

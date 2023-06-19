@@ -22,6 +22,9 @@ MAX_STEPS = 24000
 BATCH_SIZE = 32
 
 
+exclude = ["image_codebook", "model.loss"]
+
+
 def main():
     config: FLAVAArguments = build_config()
     if config.training.seed != -1:
@@ -75,6 +78,22 @@ def main():
         limit_train_batches=25350,  #25*1014,
     )
     ckpt_path = config.training.lightning_load_from_checkpoint
+
+    if "init_path" in config:
+        assert (ckpt_path is None or config.init_path is None)
+        sel_w = {}
+        for key, val in w["state_dict"].items():
+            sel = True
+            for esc_key in exclude:
+                if esc_key in key:
+                    sel = False
+            if sel:
+                sel_w[key] = val
+
+        _ = model.load_state_dict(sel_w, strict=False)
+        print(f"missing: {_.missing_keys}")
+        print(f"unexpected: {_.unexpected_keys}")
+
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
     trainer.validate(datamodule=datamodule)
 

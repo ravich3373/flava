@@ -1,5 +1,6 @@
 # Note that in original FLAVA paper, only Logistic Regression numbers were provided for image datasets.
 _target_: flava.definitions.FLAVAArguments
+init_path: "/home/ravi/Documents/courses/healthcare/Research/multimodal/examples/flava/notebooks/flava-epoch=00-step=21000.ckpt"
 training:
   _target_: flava.definitions.TrainingArguments
   lightning:

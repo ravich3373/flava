@@ -108,7 +108,9 @@ def main():
                     if sel_tok in key:
                         sel_dict[key] = val
                         break
-        model.load_state_dict(sel_dict, strict=False)
+        _ = model.load_state_dict(sel_dict, strict=False)
+        print(f"missing: {_.missing_keys}")
+        print(f"unexpected: {_.unexpected_keys}")
 
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
     #trainer.validate(model, datamodule=datamodule)
