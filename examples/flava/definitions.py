@@ -25,7 +25,7 @@ class ISICInfo():
     csv_path: str = MISSING
     img_path: str = MISSING
     mode: str = MISSING
-
+    binary: bool = False
 
 @dataclass
 class HFDatasetInfo(DatasetInfo):

@@ -44,11 +44,13 @@ datasets:
         csv_path: "/ext3/train_split_metadata.csv"
         img_path: "/ext3/train"
         mode: "image"
+        binary: true
     val:
       - _target_: flava.definitions.ISICInfo
         csv_path: "/ext3/val_split_metadata.csv"
         img_path: "/ext3/train"
         mode: "image"
+        binary: true
   text:
     _target_: flava.definitions.TrainingSingleDatasetInfo
     train:
@@ -56,11 +58,13 @@ datasets:
         csv_path: "/ext3/train_split_metadata.csv"
         img_path: "/ext3/train"
         mode: "text"
+        binary: true
     val:
       - _target_: flava.definitions.ISICInfo
         csv_path: "/ext3/val_split_metadata.csv"
         img_path: "/ext3/train"
         mode: "text"
+        binary: true
   vl:
     _target_: flava.definitions.TrainingSingleDatasetInfo
     train:
@@ -68,13 +72,16 @@ datasets:
         csv_path: "/ext3/train_split_metadata.csv"
         img_path: "/ext3/train"
         mode: "vl"
+        binary: true
     val:
       - _target_: flava.definitions.ISICInfo
         csv_path: "/ext3/val_split_metadata.csv"
         img_path: "/ext3/train"
         mode: "vl"
+        binary: true
     test:
       - _target_: flava.definitions.ISICInfo
         csv_path: "/ext3/test_data.csv"
         img_path: "/ext3/train"
         mode: "vl"
+        binary: true
