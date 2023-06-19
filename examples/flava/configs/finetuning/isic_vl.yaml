@@ -1,6 +1,6 @@
 # Note that in original FLAVA paper, only Logistic Regression numbers were provided for image datasets.
 _target_: flava.definitions.FLAVAArguments
-init_path: "/scratch/rc5124/ckpts_vl/last.ckpt"
+#init_path: "/scratch/rc5124/ckpts_vl/last.ckpt"
 training:
   _target_: flava.definitions.TrainingArguments
   lightning:
@@ -10,7 +10,7 @@ training:
     num_sanity_val_steps: 0
     strategy: ddp
   lightning_checkpoint:
-    dirpath: "/scratch/rc5124/ft_vl"
+    dirpath: "/scratch/rc5124/ft_vl_binary"
     filename: flava-{epoch:02d}-{step}
     save_last: true
     save_top_k: 1
