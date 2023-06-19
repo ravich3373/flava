@@ -12,6 +12,7 @@ from flava.utils import build_config, build_datamodule_kwargs
 from omegaconf import OmegaConf
 from pytorch_lightning import seed_everything, Trainer
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+import torch
 
 AVAIL_GPUS = 1
 SEED = -1
@@ -76,11 +77,13 @@ def main():
         limit_val_batches = 254,
         limit_test_batches=317,
         limit_train_batches=25350,  #25*1014,
+        max_epochs=25
     )
     ckpt_path = config.training.lightning_load_from_checkpoint
 
     if "init_path" in config:
         assert (ckpt_path is None or config.init_path is None)
+        w = torch.load(config.init_path)
         sel_w = {}
         for key, val in w["state_dict"].items():
             sel = True

@@ -1,6 +1,6 @@
 # Note that in original FLAVA paper, only Logistic Regression numbers were provided for image datasets.
 _target_: flava.definitions.FLAVAArguments
-init_path: "/home/ravi/Documents/courses/healthcare/Research/multimodal/examples/flava/notebooks/flava-epoch=00-step=21000.ckpt"
+init_path: "/scratch/rc5124/ckpts_vl/last.ckpt"
 training:
   _target_: flava.definitions.TrainingArguments
   lightning:
@@ -13,12 +13,14 @@ training:
     dirpath: "/scratch/rc5124/ft_vl"
     filename: flava-{epoch:02d}-{step}
     save_last: true
-    every_n_train_steps: 1000
+    save_top_k: 1
+    #every_n_train_steps: 30 #1000
+    every_n_epochs: 1 # remove ravi
     save_on_train_epoch_end: true
     verbose: true
     monitor: validation/accuracy/classification
     mode: max
-  lightning_load_from_checkpoint: "/scratch/rc5124/ckpts_vl/last.ckpt"
+  lightning_load_from_checkpoint: null
   seed: 77
   batch_size: 16
   num_workers: 4
