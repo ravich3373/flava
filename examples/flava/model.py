@@ -8,7 +8,7 @@ from typing import Any, Tuple
 
 import torch
 from pytorch_lightning import LightningModule
-from torchmetrics import Accuracy
+from torchmetrics import Accuracy, Precision, ConfusionMatrix
 from torchmultimodal.models.flava.model import (
     flava_model_for_classification,
     flava_model_for_pretraining,
@@ -140,10 +140,13 @@ class FLAVAClassificationLightningModule(LightningModule):
         self.warmup_steps = warmup_steps
         self.max_steps = max_steps
         self.adam_betas = adam_betas
-        self.metrics = Accuracy(task="multiclass", num_classes=num_classes)
+        self.acc = Accuracy(task="multiclass", num_classes=num_classes)
+        self.pre = Precision(task="multiclass", num_classes=num_classes, average=None)
+        self.avg_pre = Precision(task="multiclass", num_classes=num_classes)
+        self.cm = ConfusionMatrix(task="multiclass", num_classes=num_classes)
 
     def training_step(self, batch, batch_idx):
-        output, accuracy = self._step(batch, batch_idx)
+        output, accuracy, pre, avg_pre, cm = self._step(batch, batch_idx)
         self.log("train/losses/classification", output.loss, prog_bar=True, logger=True)
         self.log(
             "train/accuracy/classification",
@@ -152,17 +155,59 @@ class FLAVAClassificationLightningModule(LightningModule):
             logger=True,
             sync_dist=True,
         )
+        self.log(
+            "train/precision/classification",
+            pre,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            "train/avg_precision/classification",
+            avg_pre,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            "train/cm/classification",
+            cm,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+        )
 
         return output.loss
 
     def validation_step(self, batch, batch_idx):
-        output, accuracy = self._step(batch, batch_idx)
+        output, accuracy, pre, avg_pre, cm = self._step(batch, batch_idx)
         self.log(
             "validation/losses/classification", output.loss, prog_bar=True, logger=True
         )
         self.log(
             "validation/accuracy/classification",
             accuracy,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            "train/precision/classification",
+            pre,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            "train/avg_precision/classification",
+            avg_pre,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            "train/cm/classification",
+            cm,
             prog_bar=True,
             logger=True,
             sync_dist=True,
@@ -188,9 +233,12 @@ class FLAVAClassificationLightningModule(LightningModule):
             labels=labels,
         )
 
-        accuracy = self.metrics(output.logits, labels)
+        accuracy = self.acc(output.logits, labels)
+        pre = self.pre(output.logits, labels)
+        avg_pre = self.avg_pre(output.logits, labels)
+        cm = self.cm(output.logits, labels)
 
-        return output, accuracy
+        return output, accuracy, pre, avg_pre, cm
 
     def configure_optimizers(self):
         return get_optimizers_for_lightning(
