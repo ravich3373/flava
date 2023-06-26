@@ -192,14 +192,14 @@ class FLAVAClassificationLightningModule(LightningModule):
             sync_dist=True,
         )
         self.log(
-            "train/micro_avg_precision/classification",
+            "validation/micro_avg_precision/classification",
             avg_pre,
             prog_bar=True,
             logger=True,
             sync_dist=True,
         )
 
-        self.log_by_class(pre, "precision", "train")
+        self.log_by_class(pre, "precision", "validation")
 
         return output.loss
 
