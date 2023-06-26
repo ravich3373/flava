@@ -143,11 +143,22 @@ class FLAVAClassificationLightningModule(LightningModule):
         self.acc = Accuracy(task="multiclass", num_classes=num_classes)
         self.pre = Precision(task="multiclass", num_classes=num_classes, average=None)
         self.avg_pre = Precision(task="multiclass", num_classes=num_classes)
-        self.cm = ConfusionMatrix(task="multiclass", num_classes=num_classes)
+
+
+    def log_by_class(self, metric_tensor, matric_name, split):
+        for cls_idx, metric in enumerate(metric_tensor):
+            self.log(
+            f"{split}/{matric_name}_cls_{cls_idx}/classification",
+            metric,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+            )
 
     def training_step(self, batch, batch_idx):
-        output, accuracy, pre, avg_pre, cm = self._step(batch, batch_idx)
+        output, accuracy, pre, avg_pre = self._step(batch, batch_idx)
         self.log("train/losses/classification", output.loss, prog_bar=True, logger=True)
+        
         self.log(
             "train/accuracy/classification",
             accuracy,
@@ -155,27 +166,16 @@ class FLAVAClassificationLightningModule(LightningModule):
             logger=True,
             sync_dist=True,
         )
+
         self.log(
-            "train/precision/classification",
-            pre,
-            prog_bar=True,
-            logger=True,
-            sync_dist=True,
-        )
-        self.log(
-            "train/avg_precision/classification",
+            "train/micro_avg_precision/classification",
             avg_pre,
             prog_bar=True,
             logger=True,
             sync_dist=True,
         )
-        self.log(
-            "train/cm/classification",
-            cm,
-            prog_bar=True,
-            logger=True,
-            sync_dist=True,
-        )
+
+        self.log_by_class(pre, "precision", "train")
 
         return output.loss
 
@@ -192,26 +192,14 @@ class FLAVAClassificationLightningModule(LightningModule):
             sync_dist=True,
         )
         self.log(
-            "train/precision/classification",
-            pre,
-            prog_bar=True,
-            logger=True,
-            sync_dist=True,
-        )
-        self.log(
-            "train/avg_precision/classification",
+            "train/micro_avg_precision/classification",
             avg_pre,
             prog_bar=True,
             logger=True,
             sync_dist=True,
         )
-        self.log(
-            "train/cm/classification",
-            cm,
-            prog_bar=True,
-            logger=True,
-            sync_dist=True,
-        )
+
+        self.log_by_class(pre, "precision", "train")
 
         return output.loss
 
@@ -236,9 +224,8 @@ class FLAVAClassificationLightningModule(LightningModule):
         accuracy = self.acc(output.logits, labels)
         pre = self.pre(output.logits, labels)
         avg_pre = self.avg_pre(output.logits, labels)
-        cm = self.cm(output.logits, labels)
 
-        return output, accuracy, pre, avg_pre, cm
+        return output, accuracy, pre, avg_pre
 
     def configure_optimizers(self):
         return get_optimizers_for_lightning(
