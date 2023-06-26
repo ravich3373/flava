@@ -180,7 +180,7 @@ class FLAVAClassificationLightningModule(LightningModule):
         return output.loss
 
     def validation_step(self, batch, batch_idx):
-        output, accuracy, pre, avg_pre, cm = self._step(batch, batch_idx)
+        output, accuracy, pre, avg_pre = self._step(batch, batch_idx)
         self.log(
             "validation/losses/classification", output.loss, prog_bar=True, logger=True
         )

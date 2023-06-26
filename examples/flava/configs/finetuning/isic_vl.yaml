@@ -10,7 +10,7 @@ training:
     num_sanity_val_steps: 0
     strategy: ddp
   lightning_checkpoint:
-    dirpath: "/scratch/rc5124/ft_vl_binary"
+    dirpath: "/scratch/rc5124/ft_vl"
     filename: flava-{epoch:02d}-{step}
     save_last: true
     save_top_k: 1
@@ -18,7 +18,7 @@ training:
     every_n_epochs: 1 # remove ravi
     save_on_train_epoch_end: true
     verbose: true
-    monitor: validation/accuracy/classification
+    monitor: validation/micro_avg_precision/classification
     mode: max
   lightning_load_from_checkpoint: null
   seed: 77
