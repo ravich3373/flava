@@ -384,7 +384,7 @@ class ISICMLMDataModule(TextDataModule):
 
     def setup(self, stage=None):
         if self.tokenizer is None:
-            self.tokenizer = BertTokenizer.from_pretrained(TEXT_DEFAULT_TOKENIZER)
+            self.tokenizer = BertTokenizer.from_pretrained("dmis-lab/biobert-v1.1")#TEXT_DEFAULT_TOKENIZER)
         transform = partial(
             encode_text_batch,
             tokenizer=self.tokenizer,
@@ -477,7 +477,7 @@ class VLDataModule(LightningDataModule):
             # text_tokenizer = BertTokenizer.from_pretrained(
             #     TEXT_WHOLE_WORD_MASK_TOKENIZER
             # )
-            text_tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
+            text_tokenizer = BertTokenizer.from_pretrained("dmis-lab/biobert-v1.1")
             self.text_transform = default_text_transform(
                 text_tokenizer, max_text_length=VL_MAX_LENGTH_DEFAULT
             )
@@ -650,7 +650,7 @@ class ISICVLDataModule(LightningDataModule):
             # text_tokenizer = BertTokenizer.from_pretrained(
             #     TEXT_WHOLE_WORD_MASK_TOKENIZER
             # )
-            text_tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
+            text_tokenizer = BertTokenizer.from_pretrained("dmis-lab/biobert-v1.1")
             self.text_transform = default_text_transform(
                 text_tokenizer, max_text_length=VL_MAX_LENGTH_DEFAULT
             )
