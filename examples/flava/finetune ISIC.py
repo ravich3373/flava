@@ -49,8 +49,6 @@ def main():
 
     datamodule.setup("fit")
 
-    for data in datamodule.train_dataloader():
-        break
     model = FLAVAClassificationLightningModule(
         num_classes=config.datasets.num_classes,
         learning_rate=config.training.learning_rate,

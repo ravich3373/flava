@@ -19,6 +19,7 @@ from flava.definitions import HFDatasetInfo, TorchVisionDatasetInfo, ISICInfo
 from pytorch_lightning import LightningDataModule
 from transformers import (
     BertTokenizer,
+    DistilBertTokenizer,
     DataCollatorForLanguageModeling,
     DataCollatorForWholeWordMask,
     DefaultDataCollator,
@@ -473,9 +474,10 @@ class VLDataModule(LightningDataModule):
     def setup(self, stage=None):
         if self.text_transform is None:
             # TODO Update to use whole word mask vocab
-            text_tokenizer = BertTokenizer.from_pretrained(
-                TEXT_WHOLE_WORD_MASK_TOKENIZER
-            )
+            # text_tokenizer = BertTokenizer.from_pretrained(
+            #     TEXT_WHOLE_WORD_MASK_TOKENIZER
+            # )
+            text_tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
             self.text_transform = default_text_transform(
                 text_tokenizer, max_text_length=VL_MAX_LENGTH_DEFAULT
             )
@@ -645,9 +647,10 @@ class ISICVLDataModule(LightningDataModule):
     def setup(self, stage=None):
         if self.text_transform is None:
             # TODO Update to use whole word mask vocab
-            text_tokenizer = BertTokenizer.from_pretrained(
-                TEXT_WHOLE_WORD_MASK_TOKENIZER
-            )
+            # text_tokenizer = BertTokenizer.from_pretrained(
+            #     TEXT_WHOLE_WORD_MASK_TOKENIZER
+            # )
+            text_tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
             self.text_transform = default_text_transform(
                 text_tokenizer, max_text_length=VL_MAX_LENGTH_DEFAULT
             )

@@ -15,6 +15,7 @@ from torchmultimodal.modules.layers.text_embedding import BERTTextEmbeddings
 from torchmultimodal.modules.layers.transformer import TransformerEncoder
 from torchmultimodal.modules.losses.flava import Pooler
 
+from transformers import DistilBertTokenizer, DistilBertModel
 
 def flava_text_encoder(
     # TransformerEncoder params

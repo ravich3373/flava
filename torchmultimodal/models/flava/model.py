@@ -32,6 +32,8 @@ from torchmultimodal.modules.losses.flava import (
 from torchmultimodal.utils.common import load_module_from_url, ModelOutput
 from typing_extensions import Literal
 
+from transformers import BertTokenizer, DistilBertTokenizer, DistilBertModel, BertModel
+from transformers.models.bert.modeling_bert import BertConfig
 
 EMBEDDING_OPTIONS = Literal["image", "text", "mm"]
 
@@ -246,8 +248,8 @@ class FLAVAModel(nn.Module):
         encoded_text = self.text_encoder(
             input_ids=text,
             attention_mask=text_mask,
-            return_attn_weights=True,
-            return_hidden_states=True,
+            #return_attn_weights=True, ravi hf bert does not support these args, pass them in load_pretrained
+            #return_hidden_states=True,
         )
         if projection:
             projected_embeddings = self.text_projection(
@@ -466,19 +468,21 @@ def flava_model(
         patch_size=patch_size,
         num_channels=num_channels,
     )
-    text_encoder = flava_text_encoder(
-        hidden_size=text_hidden_size,
-        num_attention_heads=text_num_attention_heads,
-        num_hidden_layers=text_num_hidden_layers,
-        dropout=text_dropout,
-        intermediate_size=text_intermediate_size,
-        intermediate_activation=text_intermediate_activation,
-        layer_norm_eps=text_layer_norm_eps,
-        vocab_size=vocab_size,
-        pad_token_id=pad_token_id,
-        type_vocab_size=type_vocab_size,
-        max_position_embeddings=max_position_embeddings,
-    )
+#    text_encoder = flava_text_encoder(
+#        hidden_size=text_hidden_size,
+#        num_attention_heads=text_num_attention_heads,
+#        num_hidden_layers=text_num_hidden_layers,
+#        dropout=text_dropout,
+#        intermediate_size=text_intermediate_size,
+#        intermediate_activation=text_intermediate_activation,
+#        layer_norm_eps=text_layer_norm_eps,
+#        vocab_size=vocab_size,
+#        pad_token_id=pad_token_id,
+#        type_vocab_size=type_vocab_size,
+#        max_position_embeddings=max_position_embeddings,
+#    )
+    cfg1 = BertConfig.from_pretrained("dmis-lab/biobert-v1.1", output_hidden_states=True, output_attentions=True)
+    text_encoder = BertModel.from_pretrained("dmis-lab/biobert-v1.1", config=cfg1)
     mm_encoder = flava_multimodal_encoder(
         hidden_size=multimodal_hidden_size,
         num_attention_heads=multimodal_num_attention_heads,

@@ -138,6 +138,9 @@ class VLTransform:
             output.update(self.image_transform(image))
         output["labels"] = torch.Tensor([info["label"]]).long()
         output.update(self.text_transform(text))
+        # ravi, vl to get mm embedding check for text key
+        output["text"] = output["input_ids"]
+        #
         if self.unnest:
             return self.unnester(output)
         return output
