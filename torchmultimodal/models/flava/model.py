@@ -15,6 +15,7 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 
 import torch
 from torch import nn, Tensor
+import torch.nn.functional as F
 from torchmultimodal.models.flava.image_encoder import flava_image_encoder
 from torchmultimodal.models.flava.text_encoder import flava_text_encoder
 from torchmultimodal.models.flava.transformer import FLAVATransformerWithoutEmbeddings
@@ -538,6 +539,26 @@ def flava_model_for_pretraining(
     return flava
 
 
+class FocalLoss(nn.Module): # ravi
+    '''
+    Multi-class Focal Loss
+    '''
+    def __init__(self, gamma=2, weight=None):
+        super(FocalLoss, self).__init__()
+        self.gamma = gamma
+        self.weight = weight
+
+    def forward(self, input, target):
+        """
+        input: [N, C], float32
+        target: [N, ], int64
+        """
+        logpt = F.log_softmax(input, dim=1)
+        pt = torch.exp(logpt)
+        logpt = (1-pt)**self.gamma * logpt
+        loss = F.nll_loss(logpt, target, self.weight)
+        return loss
+
 def flava_model_for_classification(
     num_classes: int,
     classifier_in_dim: int = 768,
@@ -560,7 +581,7 @@ def flava_model_for_classification(
     )
     model = flava_model(**flava_model_kwargs)
     if loss_fn is None:
-        loss_fn = nn.CrossEntropyLoss()
+        loss_fn = FocalLoss() #nn.CrossEntropyLoss() ravi
 
     classification_model = FLAVAForClassification(
         model=model, classifier=classifier, loss=loss_fn
