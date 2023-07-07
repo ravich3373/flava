@@ -9,7 +9,7 @@ from typing import Optional
 import torch
 from torch import nn, Tensor
 
-
+# from transformers.models.distilbert.modeling_distilbert import Embeddings 
 class BERTTextEmbeddings(nn.Module):
     """Construct word, position, and token type embeddings following BERT, similar to HuggingFace BertEmbeddings
 
