@@ -8,7 +8,7 @@ from typing import Any, Tuple
 
 import torch
 from pytorch_lightning import LightningModule
-from torchmetrics import Accuracy, Precision, ConfusionMatrix
+from torchmetrics import Accuracy, Recall, ConfusionMatrix
 from torchmultimodal.models.flava.model import (
     flava_model_for_classification,
     flava_model_for_pretraining,
@@ -117,7 +117,9 @@ class FLAVAPreTrainingLightningModule(LightningModule):
             self.max_steps,
         )
 
-
+# ravi - torch metrics
+# https://github.com/Lightning-AI/lightning/issues/4396
+# https://github.com/Lightning-AI/torchmetrics/issues/789
 class FLAVAClassificationLightningModule(LightningModule):
     def __init__(
         self,
@@ -141,8 +143,8 @@ class FLAVAClassificationLightningModule(LightningModule):
         self.max_steps = max_steps
         self.adam_betas = adam_betas
         self.acc = Accuracy(task="multiclass", num_classes=num_classes)
-        self.pre = Precision(task="multiclass", num_classes=num_classes, average=None)
-        self.avg_pre = Precision(task="multiclass", num_classes=num_classes)
+        self.re = Recall(task="multiclass", num_classes=num_classes, average=None)
+        self.avg_re = Recall(task="multiclass", num_classes=num_classes)
 
 
     def log_by_class(self, metric_tensor, matric_name, split):
@@ -153,10 +155,11 @@ class FLAVAClassificationLightningModule(LightningModule):
             prog_bar=True,
             logger=True,
             sync_dist=True,
+            on_step=False, on_epoch=True
             )
 
     def training_step(self, batch, batch_idx):
-        output, accuracy, pre, avg_pre = self._step(batch, batch_idx)
+        output, accuracy, re, avg_re = self._step(batch, batch_idx)
         self.log("train/losses/classification", output.loss, prog_bar=True, logger=True)
         
         self.log(
@@ -165,17 +168,19 @@ class FLAVAClassificationLightningModule(LightningModule):
             prog_bar=True,
             logger=True,
             sync_dist=True,
+            on_step=False, on_epoch=True
         )
 
         self.log(
-            "train/micro_avg_precision/classification",
-            avg_pre,
+            "train/micro_avg_recall/classification",
+            avg_re,
             prog_bar=True,
             logger=True,
             sync_dist=True,
+            on_step=False, on_epoch=True
         )
 
-        self.log_by_class(pre, "precision", "train")
+        self.log_by_class(re, "recall", "train")
 
         return output.loss
 
@@ -190,16 +195,18 @@ class FLAVAClassificationLightningModule(LightningModule):
             prog_bar=True,
             logger=True,
             sync_dist=True,
+            on_step=False, on_epoch=True
         )
         self.log(
-            "validation/micro_avg_precision/classification",
+            "validation/micro_avg_recall/classification",
             avg_pre,
             prog_bar=True,
             logger=True,
             sync_dist=True,
+            on_step=False, on_epoch=True
         )
 
-        self.log_by_class(pre, "precision", "validation")
+        self.log_by_class(pre, "recall", "validation")
 
         return output.loss
 
@@ -222,10 +229,10 @@ class FLAVAClassificationLightningModule(LightningModule):
         )
 
         accuracy = self.acc(output.logits, labels)
-        pre = self.pre(output.logits, labels)
-        avg_pre = self.avg_pre(output.logits, labels)
+        re = self.re(output.logits, labels)
+        avg_re = self.avg_re(output.logits, labels)
 
-        return output, accuracy, pre, avg_pre
+        return output, accuracy, re, avg_re
 
     def configure_optimizers(self):
         return get_optimizers_for_lightning(
