@@ -164,7 +164,7 @@ class FLAVAClassificationLightningModule(LightningModule):
         
         self.log(
             "train/accuracy/classification",
-            accuracy,
+            self.acc,
             prog_bar=True,
             logger=True,
             sync_dist=True,
@@ -173,7 +173,7 @@ class FLAVAClassificationLightningModule(LightningModule):
 
         self.log(
             "train/micro_avg_recall/classification",
-            avg_re,
+            self.avg_re,
             prog_bar=True,
             logger=True,
             sync_dist=True,
@@ -191,7 +191,7 @@ class FLAVAClassificationLightningModule(LightningModule):
         )
         self.log(
             "validation/accuracy/classification",
-            accuracy,
+            self.acc,
             prog_bar=True,
             logger=True,
             sync_dist=True,
@@ -199,7 +199,7 @@ class FLAVAClassificationLightningModule(LightningModule):
         )
         self.log(
             "validation/micro_avg_recall/classification",
-            avg_pre,
+            self.avg_re,
             prog_bar=True,
             logger=True,
             sync_dist=True,
