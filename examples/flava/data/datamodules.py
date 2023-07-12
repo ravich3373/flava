@@ -951,7 +951,7 @@ class ISICTorchVisionDataModule(LightningDataModule):
         self.test_info = test_infos
 
         if image_transforms is None:
-            image_transforms = default_torchvision_transforms()
+            image_transforms = default_torchvision_transforms(size=(384, 384), use_dict=True, inp_dict=False)
 
         self.train_transform, self.test_transform = image_transforms
         self.batch_size = batch_size
@@ -964,18 +964,18 @@ class ISICTorchVisionDataModule(LightningDataModule):
         self.train_dataset = ISICDataset(self.train_info[0]["csv_path"],
                                          self.train_info[0]["img_path"],
                                          self.train_info[0]["mode"],
-                                         no_dict=True)
+                                         no_dict=False)
 
         self.train_dataset.set_transform(train_transform)
         self.val_dataset = ISICDataset(self.val_info[0]["csv_path"],
                                        self.val_info[0]["img_path"],
                                        self.val_info[0]["mode"],
-                                       no_dict=True)
+                                       no_dict=False)
         self.val_dataset.set_transform(val_transform)
         self.test_dataset = ISICDataset(self.test_info[0]["csv_path"],
                                         self.test_info[0]["img_path"],
                                         self.test_info[0]["mode"],
-                                        no_dict=True)
+                                        no_dict=False)
         self.test_dataset.set_transform(val_transform)
 
     def train_dataloader(self):
@@ -998,6 +998,6 @@ class ISICTorchVisionDataModule(LightningDataModule):
         )
 
     def on_before_batch_transfer(self, batch, *args):
-        images, targets = batch
-        batch = {"image": images, "labels": targets}
+        #images, targets = batch
+        batch = {"image": batch["image"], "labels": batch["label"]}
         return batch

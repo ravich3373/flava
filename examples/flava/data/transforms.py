@@ -41,12 +41,15 @@ def encode_text_batch(
 def transform_image_dict(image_dict, transform, *args, **kwargs):
     return {"image": transform(image_dict["image"], *args, **kwargs)}
 
+def transform_image_dict_ravi(image, transform, *args, **kwargs):
+    return {"image": transform(image, *args, **kwargs)}
 
 def default_torchvision_transforms(
     size=IMAGE_DEFAULT_SIZE,
     mean=IMAGENET_DEFAULT_MEAN,
     std=IMAGENET_DEFAULT_STD,
     use_dict=False,
+    inp_dict=True
 ):
     transform = transforms.Compose(
         [
@@ -60,7 +63,10 @@ def default_torchvision_transforms(
     )
 
     if use_dict:
-        transform = partial(transform_image_dict, transform=transform)
+        if inp_dict:
+            transform = partial(transform_image_dict, transform=transform)
+        else:
+            transform = partial(transform_image_dict_ravi, transform=transform)
 
     return transform, transform
 
