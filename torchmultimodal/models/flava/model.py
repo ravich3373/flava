@@ -35,6 +35,7 @@ from typing_extensions import Literal
 
 from transformers import BertTokenizer, DistilBertTokenizer, DistilBertModel, BertModel
 from transformers.models.bert.modeling_bert import BertConfig
+from transformers.models.distilbert.modeling_distilbert import DistilBertConfig
 
 EMBEDDING_OPTIONS = Literal["image", "text", "mm"]
 
@@ -482,8 +483,8 @@ def flava_model(
 #        type_vocab_size=type_vocab_size,
 #        max_position_embeddings=max_position_embeddings,
 #    )
-    cfg1 = BertConfig.from_pretrained("dmis-lab/biobert-v1.1", output_hidden_states=True, output_attentions=True)
-    text_encoder = BertModel.from_pretrained("dmis-lab/biobert-v1.1", config=cfg1)
+    cfg1 = DistilBertConfig.from_pretrained("nlpie/bio-distilbert-uncased", output_hidden_states=True, output_attentions=True)
+    text_encoder = DistilBertModel.from_pretrained("nlpie/bio-distilbert-uncased", config=cfg1)
     mm_encoder = flava_multimodal_encoder(
         hidden_size=multimodal_hidden_size,
         num_attention_heads=multimodal_num_attention_heads,
