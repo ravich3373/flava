@@ -961,20 +961,20 @@ class ISICTorchVisionDataModule(LightningDataModule):
         train_transform = self.train_transform
         val_transform = self.test_transform
 
-        self.train_dataset = ISICDataset(self.train_infos[0]["csv_path"],
-                                         self.train_infos[0]["img_path"],
-                                         self.train_infos[0]["mode"],
+        self.train_dataset = ISICDataset(self.train_info[0]["csv_path"],
+                                         self.train_info[0]["img_path"],
+                                         self.train_info[0]["mode"],
                                          no_dict=True)
 
         self.train_dataset.set_transform(train_transform)
-        self.val_dataset = ISICDataset(self.val_infos[0]["csv_path"],
-                                       self.val_infos[0]["img_path"],
-                                       self.val_infos[0]["mode"],
+        self.val_dataset = ISICDataset(self.val_info[0]["csv_path"],
+                                       self.val_info[0]["img_path"],
+                                       self.val_info[0]["mode"],
                                        no_dict=True)
         self.val_dataset.set_transform(val_transform)
-        self.test_dataset = ISICDataset(self.test_infos[0]["csv_path"],
-                                        self.test_infos[0]["img_path"],
-                                        self.test_infos[0]["mode"],
+        self.test_dataset = ISICDataset(self.test_info[0]["csv_path"],
+                                        self.test_info[0]["img_path"],
+                                        self.test_info[0]["mode"],
                                         no_dict=True)
         self.test_dataset.set_transform(val_transform)
 
