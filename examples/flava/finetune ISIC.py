@@ -96,9 +96,19 @@ def main():
         _ = model.load_state_dict(sel_w, strict=False)
         print(f"missing: {_.missing_keys}")
         print(f"unexpected: {_.unexpected_keys}")
+    
+    if "linear_probe" in config:
+        if config.linear_probe:
+            # free all the layers other than model.model.classifier
+            for name, p in model.named_parameters():
+                if not "model.classifier" in name:
+                    p.requires_grad = False
+                else:
+                    print(f"Training weight: {name}")
 
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
     trainer.validate(datamodule=datamodule)
+    trainer.test(model, datamodule=datamodule, ckpt_path=ckpt_path)
 
 
 if __name__ == "__main__":

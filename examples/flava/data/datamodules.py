@@ -39,6 +39,7 @@ from .transforms import (
     VLTransform,
 )
 from .utils import build_datasets_from_info, fetch_images
+from pathlib import Path
 
 
 def transform_image(transform, sample):
@@ -111,6 +112,8 @@ class ISICDataset(Dataset):
         data = self.df.iloc[index].to_dict()
         if "image" in data.keys():
             im_pth = os.path.join(self.img_dir, data['image'])
+            if Path(im_pth).suffix == "":
+                im_pth = im_pth + ".jpg"
             img = Image.open(im_pth)
             data['image'] = img
             if self.ret_img_pth:

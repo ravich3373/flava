@@ -142,9 +142,13 @@ class FLAVAClassificationLightningModule(LightningModule):
         self.warmup_steps = warmup_steps
         self.max_steps = max_steps
         self.adam_betas = adam_betas
-        self.acc = Accuracy(task="multiclass", num_classes=num_classes)
+        self.acc = Accuracy(task="multiclass", num_classes=num_classes, average="macro")
         self.re = Recall(task="multiclass", num_classes=num_classes, average=None)
-        self.avg_re = Recall(task="multiclass", num_classes=num_classes)
+        self.avg_re = Recall(task="multiclass", num_classes=num_classes, average="macro")
+
+        self.val_acc = Accuracy(task="multiclass", num_classes=num_classes, average="macro")
+        self.val_re = Recall(task="multiclass", num_classes=num_classes, average=None)
+        self.val_avg_re = Recall(task="multiclass", num_classes=num_classes, average="macro")
 
 
     def log_by_class(self, metric_tensor, matric_name, split):
@@ -159,58 +163,64 @@ class FLAVAClassificationLightningModule(LightningModule):
             )
 
     def training_step(self, batch, batch_idx):
-        output, accuracy, re, avg_re = self._step(batch, batch_idx)
+        output = self._step(batch, batch_idx, train=True)
         self.log("train/losses/classification", output.loss, prog_bar=True, logger=True)
         
         self.log(
             "train/accuracy/classification",
             self.acc,
-            prog_bar=True,
-            logger=True,
             sync_dist=True,
-            on_step=False, on_epoch=True
+            on_step=True, on_epoch=True,
+            prog_bar=True, logger=True
         )
 
         self.log(
             "train/micro_avg_recall/classification",
             self.avg_re,
-            prog_bar=True,
-            logger=True,
             sync_dist=True,
-            on_step=False, on_epoch=True
+            on_step=True, on_epoch=True,
+            prog_bar=True, logger=True
         )
 
-        self.log_by_class(re, "recall", "train")
+
+        #self.log_by_class(re, "recall", "train")
+
+        return output.loss
+
+    def test_step(self, batch, batch_idx):
+        output = self._step(batch, batch_idx, train=False)
+        self.log("train/losses/classification", output.loss, prog_bar=True, logger=True)
+        
+        self.log(
+            "test/accuracy/classification",
+            self.acc,
+            sync_dist=True,
+            on_step=True, on_epoch=True,
+            prog_bar=True, logger=True
+        )
+
+        self.log(
+            "test/micro_avg_recall/classification",
+            self.avg_re,
+            sync_dist=True,
+            on_step=True, on_epoch=True,
+            prog_bar=True, logger=True
+        )
+        #self.log_by_class(re, "recall", "train")
 
         return output.loss
 
     def validation_step(self, batch, batch_idx):
-        output, accuracy, pre, avg_pre = self._step(batch, batch_idx)
+        output = self._step(batch, batch_idx, train=False)
         self.log(
             "validation/losses/classification", output.loss, prog_bar=True, logger=True
         )
-        self.log(
-            "validation/accuracy/classification",
-            self.acc,
-            prog_bar=True,
-            logger=True,
-            sync_dist=True,
-            on_step=False, on_epoch=True
-        )
-        self.log(
-            "validation/micro_avg_recall/classification",
-            self.avg_re,
-            prog_bar=True,
-            logger=True,
-            sync_dist=True,
-            on_step=False, on_epoch=True
-        )
-
-        self.log_by_class(pre, "recall", "validation")
+    
+        #self.log_by_class(pre, "recall", "validation")
 
         return output.loss
 
-    def _step(self, batch, batch_idx):
+    def _step(self, batch, batch_idx, train=False):
         if "image" in batch and ("text" in batch or "text_masked" in batch):
             required_embedding = "mm"
         elif "image" in batch:
@@ -227,12 +237,37 @@ class FLAVAClassificationLightningModule(LightningModule):
             required_embedding=required_embedding,
             labels=labels,
         )
+        
+        if train:
+            accuracy = self.acc.update(output.logits, labels)
+            re = self.re.update(output.logits, labels)
+            avg_re = self.avg_re.update(output.logits, labels)
+        else:
+            accuracy = self.val_acc.update(output.logits, labels)
+            re = self.val_re.update(output.logits, labels)
+            avg_re = self.val_avg_re.update(output.logits, labels)
 
-        accuracy = self.acc(output.logits, labels)
-        re = self.re(output.logits, labels)
-        avg_re = self.avg_re(output.logits, labels)
+        return output
 
-        return output, accuracy, re, avg_re
+    def on_validation_epoch_end(self):
+        acc = self.val_acc.compute()
+        re = self.val_avg_re.compute()
+        
+        self.log(
+            "validation/accuracy/classification",
+            acc,
+            sync_dist=True,
+            on_step=False, on_epoch=True,
+            prog_bar=True, logger=True
+        )
+        self.log(
+            "validation/micro_avg_recall/classification",
+            re,
+            sync_dist=True,
+            on_step=False, on_epoch=True,
+            prog_bar=True, logger=True
+        )
+
 
     def configure_optimizers(self):
         return get_optimizers_for_lightning(
