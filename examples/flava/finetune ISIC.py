@@ -23,7 +23,7 @@ MAX_STEPS = 24000
 BATCH_SIZE = 32
 
 
-exclude = ["image_codebook", "model.loss"]
+exclude = ["model.loss"]
 
 
 def main():
