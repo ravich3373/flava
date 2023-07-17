@@ -77,7 +77,7 @@ def main():
         limit_val_batches = 254,
         limit_test_batches=317,
         limit_train_batches=25350,  #25*1014,
-        max_epochs=25
+        max_epochs=15
     )
     ckpt_path = config.training.lightning_load_from_checkpoint
 
