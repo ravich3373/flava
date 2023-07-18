@@ -144,6 +144,51 @@ class ISICDataset(Dataset):
         return [data]
 
 
+class CBISDataset(ISICDataset):
+    def __init__(self,
+                 csv_path: Union[Path, str],
+                 img_path: Union[Path, str],
+                 mode,
+                 ret_img_pth = False,
+                 no_dict = False,
+                 binary=False):
+
+        super().__init__(csv_path=csv_path,
+                        img_path=img_path,
+                        mode=mode,
+                        ret_img_pth=ret_img_pth,
+                        no_dict=no_dict,
+                        binary=binary)
+        if not binary:
+            self.cols = ["image_path", "pathology", "description"]
+        else:
+            raise(Exception("Binary dataset not implemented for CBIS"))
+        self.df = pd.read_csv(csv_path, usecols=self.cols)
+        self.img_dir = img_path
+        self.transforms = None
+        self.mode = mode
+        if not binary:
+            self.label_num2str = {0: 'BENIGN', 1:'BENIGN_WITHOUT_CALLBACK', 2:'MALIGNANT'}
+            self.label_str2num = {'BENIGN': 0,'BENIGN_WITHOUT_CALLBACK':1,'MALIGNANT':2}
+
+        if not binary:
+            y_col = "pathology"
+
+        self.df[y_col] = self.df[y_col].apply(lambda l: self.label_str2num[l])
+        self.df["image_path"] = self.df["image_path"].apply(lambda l: "/".join(l.split("/")[1:]))
+
+        if mode == "text":
+            self.df = self.df[[y_col, "description"]]
+        elif mode == "image":
+            self.df = self.df[[y_col, "image_path"]]
+        elif mode == "mlm":
+            self.df = self.df[["description"]]
+        
+        d = {"image_path": "image",
+             y_col: "label",
+             "description": "text"}
+        self.df.rename(mapper=d, axis=1, inplace=True)
+
 class DataCollatorForWholeWordMaskRetainingBatch(DataCollatorForWholeWordMask):
     def __init__(self, text_tokenizer, mlm_probability, finetune=False):
         super().__init__(text_tokenizer, mlm_probability=mlm_probability)
