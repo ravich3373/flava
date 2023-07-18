@@ -41,7 +41,7 @@ def main():
     # also needed for the imagenet eval callback
     imagenet_datamodule = ISICDataModule(
         **build_datamodule_kwargs(config.datasets.image, config.training),
-        type=config.datasets.ds
+        type=config.datasets.type
     )
     if "image" in config.datasets.selected:
         datamodules.append(imagenet_datamodule)
@@ -49,14 +49,14 @@ def main():
     if "text" in config.datasets.selected:
         mlm_datamodule = ISICMLMDataModule(
             **build_datamodule_kwargs(config.datasets.text, config.training),
-            type=config.datasets.ds
+            type=config.datasets.type
         )
         datamodules.append(mlm_datamodule)
 
     if "vl" in config.datasets.selected:
         vl_datamodule = ISICVLDataModule(
             **build_datamodule_kwargs(config.datasets.vl, config.training),
-            type=config.datasets.ds
+            type=config.datasets.type
         )
         datamodules.append(vl_datamodule)
 

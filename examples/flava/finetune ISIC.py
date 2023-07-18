@@ -35,7 +35,7 @@ def main():
     if "image" in config.datasets.selected:
         datamodule = ISICTorchVisionDataModule(
             **build_datamodule_kwargs(config.datasets.image, config.training),
-            type=config.datasets.ds
+            type=config.datasets.type
         )
     # elif "text":
     #     datamodule = TextDataModule(
@@ -47,7 +47,7 @@ def main():
             finetuning=True,
             itm_probability=-1,  # ravi dont want to mismatch images and texts.
             use_dict=True, unnest=True,
-            type=config.datasets.ds
+            type=config.datasets.type
         )
 
     datamodule.setup("fit")
