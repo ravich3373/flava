@@ -40,26 +40,29 @@ def main():
 
     # also needed for the imagenet eval callback
     imagenet_datamodule = ISICDataModule(
-        **build_datamodule_kwargs(config.datasets.image, config.training)
+        **build_datamodule_kwargs(config.datasets.image, config.training),
+        type=config.datasets.ds
     )
     if "image" in config.datasets.selected:
         datamodules.append(imagenet_datamodule)
 
     if "text" in config.datasets.selected:
         mlm_datamodule = ISICMLMDataModule(
-            **build_datamodule_kwargs(config.datasets.text, config.training)
+            **build_datamodule_kwargs(config.datasets.text, config.training),
+            type=config.datasets.ds
         )
         datamodules.append(mlm_datamodule)
 
     if "vl" in config.datasets.selected:
         vl_datamodule = ISICVLDataModule(
-            **build_datamodule_kwargs(config.datasets.vl, config.training)
+            **build_datamodule_kwargs(config.datasets.vl, config.training),
+            type=config.datasets.ds
         )
         datamodules.append(vl_datamodule)
 
     datamodule = MultiDataModule(datamodules)
 
-    datamodule.setup("fit", ds=config.ds)
+    datamodule.setup("fit")
     model = FLAVAPreTrainingLightningModule(
         learning_rate=config.training.learning_rate,
         adam_eps=config.training.adam_eps,

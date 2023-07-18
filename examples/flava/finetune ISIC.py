@@ -34,7 +34,8 @@ def main():
     assert len(config.datasets.selected) == 1
     if "image" in config.datasets.selected:
         datamodule = ISICTorchVisionDataModule(
-            **build_datamodule_kwargs(config.datasets.image, config.training)
+            **build_datamodule_kwargs(config.datasets.image, config.training),
+            type=config.datasets.ds
         )
     # elif "text":
     #     datamodule = TextDataModule(
@@ -45,10 +46,11 @@ def main():
             **build_datamodule_kwargs(config.datasets.vl, config.training),
             finetuning=True,
             itm_probability=-1,  # ravi dont want to mismatch images and texts.
-            use_dict=True, unnest=True
+            use_dict=True, unnest=True,
+            type=config.datasets.ds
         )
 
-    datamodule.setup("fit", ds=config.ds)
+    datamodule.setup("fit")
 
     model = FLAVAClassificationLightningModule(
         num_classes=config.datasets.num_classes,

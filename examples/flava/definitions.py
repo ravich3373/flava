@@ -69,7 +69,7 @@ class TrainingDatasetsInfo:
     text: Optional[TrainingSingleDatasetInfo] = None
     vl: Optional[TrainingSingleDatasetInfo] = None
     num_classes: int = MISSING
-
+    type:str = "ISIC"
 
 @dataclass
 class TrainingArguments:
@@ -98,7 +98,6 @@ class FLAVAArguments:
     pre_train_type: List[str] = MISSING # init part/whole of model for pretraining
     init_path: str = MISSING    # init model for finetuning
     linear_probe: bool = MISSING
-    ds: str = "ISIC" # ISIC or CBIS
     datasets: TrainingDatasetsInfo = TrainingDatasetsInfo()
     training: TrainingArguments = TrainingArguments()
     model: ModelArguments = ModelArguments()
