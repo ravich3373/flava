@@ -210,6 +210,14 @@ class CBISDataset(ISICDataset):
              y_col: "label",
              "description": "text"}
         self.df.rename(mapper=d, axis=1, inplace=True)
+    
+    def set_transform(self, transforms):
+        transforms = torchvision.transforms.Compose([
+            torchvision.transforms.Grayscale(num_output_channels=3),
+            transforms
+        ])
+        self.transforms = transforms
+
 
 class DataCollatorForWholeWordMaskRetainingBatch(DataCollatorForWholeWordMask):
     def __init__(self, text_tokenizer, mlm_probability, finetune=False):
