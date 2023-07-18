@@ -730,6 +730,19 @@ class ISICVLDataModule(LightningDataModule):
             drop_last=True,
         )
 
+    def test_dataloader(self):
+        return torch.utils.data.DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            sampler=None,
+            shuffle=False,
+            collate_fn=self._build_collator(),
+            # uneven batches can cause distributed issues,
+            # drop last batch to prevent those.
+            drop_last=True,
+        )
+
     def _build_collator(self):
         return DataCollatorForWholeWordMaskRetainingBatch(
             self.text_tokenizer, mlm_probability=self.mlm_probability, finetune=True

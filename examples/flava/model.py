@@ -189,11 +189,11 @@ class FLAVAClassificationLightningModule(LightningModule):
 
     def test_step(self, batch, batch_idx):
         output = self._step(batch, batch_idx, train=False)
-        self.log("train/losses/classification", output.loss, prog_bar=True, logger=True)
+        self.log("test/losses/classification", output.loss, prog_bar=True, logger=True)
         
         self.log(
             "test/accuracy/classification",
-            self.acc,
+            self.val_acc,
             sync_dist=True,
             on_step=True, on_epoch=True,
             prog_bar=True, logger=True
@@ -201,7 +201,7 @@ class FLAVAClassificationLightningModule(LightningModule):
 
         self.log(
             "test/micro_avg_recall/classification",
-            self.avg_re,
+            self.val_avg_re,
             sync_dist=True,
             on_step=True, on_epoch=True,
             prog_bar=True, logger=True
