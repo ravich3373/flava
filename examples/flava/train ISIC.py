@@ -59,7 +59,7 @@ def main():
 
     datamodule = MultiDataModule(datamodules)
 
-    datamodule.setup("fit")
+    datamodule.setup("fit", ds=config.ds)
     model = FLAVAPreTrainingLightningModule(
         learning_rate=config.training.learning_rate,
         adam_eps=config.training.adam_eps,

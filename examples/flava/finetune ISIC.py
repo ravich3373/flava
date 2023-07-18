@@ -48,7 +48,7 @@ def main():
             use_dict=True, unnest=True
         )
 
-    datamodule.setup("fit")
+    datamodule.setup("fit", ds=config.ds)
 
     model = FLAVAClassificationLightningModule(
         num_classes=config.datasets.num_classes,

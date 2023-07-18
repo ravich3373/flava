@@ -48,6 +48,33 @@ def transform_image(transform, sample):
     return sample
 
 
+def get_dataset(csv_path: Union[Path, str],
+                img_path: Union[Path, str],
+                mode,
+                ret_img_pth = False,
+                no_dict = False,
+                binary=False,
+                type="ISIC"):
+    if type == "ISIC":
+        ds = ISICDataset(csv_path=csv_path,
+                        img_path=img_path,
+                        mode=mode,
+                        ret_img_pth=ret_img_pth,
+                        no_dict=no_dict,
+                        binary=binary)
+    elif type == "CBIS":
+        ds = CBISDataset(csv_path=csv_path,
+                        img_path=img_path,
+                        mode=mode,
+                        ret_img_pth=ret_img_pth,
+                        no_dict=no_dict,
+                        binary=binary)
+    else:
+        raise Exception(f"Not supported dataset type {type}, choose CBIS/ISIC")
+    
+    return ds
+
+
 class ISICDataset(Dataset):
     def __init__(self,
                  csv_path: Union[Path, str],
@@ -444,11 +471,11 @@ class ISICMLMDataModule(TextDataModule):
             text_columns=self.text_columns,
             return_batch=False,
         )
-        self.train_dataset = ISICDataset(self.train_dataset_infos[0]["csv_path"],
+        self.train_dataset = get_dataset(self.train_dataset_infos[0]["csv_path"],
                                          self.train_dataset_infos[0]["img_path"],
                                          "mlm")
         self.train_dataset.set_transform(transform)
-        self.val_dataset = ISICDataset(self.val_dataset_infos[0]["csv_path"],
+        self.val_dataset = get_dataset(self.val_dataset_infos[0]["csv_path"],
                                        self.val_dataset_infos[0]["img_path"],
                                        "mlm")
         self.val_dataset.set_transform(transform)
@@ -713,7 +740,7 @@ class ISICVLDataModule(LightningDataModule):
         )
         val_vl_transform = VLTransform(self.test_image_transform, self.text_transform, use_dict=self.use_dict, unnest=self.unnest)
 
-        self.train_dataset = ISICDataset(self.train_dataset_infos[0]["csv_path"],
+        self.train_dataset = get_dataset(self.train_dataset_infos[0]["csv_path"],
                                          self.train_dataset_infos[0]["img_path"],
                                          self.train_dataset_infos[0]["mode"],
                                          no_dict=False)
@@ -724,7 +751,7 @@ class ISICVLDataModule(LightningDataModule):
                 itm_probability=self.itm_probability,
             )
         )
-        self.val_dataset = ISICDataset(self.val_dataset_infos[0]["csv_path"],
+        self.val_dataset = get_dataset(self.val_dataset_infos[0]["csv_path"],
                                        self.val_dataset_infos[0]["img_path"],
                                        self.val_dataset_infos[0]["mode"],
                                        no_dict=False)
@@ -737,7 +764,7 @@ class ISICVLDataModule(LightningDataModule):
         )
 
         if self.test_dataset_infos:
-            self.test_dataset = ISICDataset(self.test_dataset_infos[0]["csv_path"],
+            self.test_dataset = get_dataset(self.test_dataset_infos[0]["csv_path"],
                                             self.test_dataset_infos[0]["img_path"],
                                             self.test_dataset_infos[0]["mode"],
                                             no_dict=False)
@@ -847,12 +874,12 @@ class ISICDataModule(LightningDataModule):
         train_transform = self.train_transform
         val_transform = self.test_transform
 
-        self.train_dataset = ISICDataset(self.train_dataset_infos[0]["csv_path"],
+        self.train_dataset = get_dataset(self.train_dataset_infos[0]["csv_path"],
                                          self.train_dataset_infos[0]["img_path"],
                                          self.train_dataset_infos[0]["mode"])
 
         self.train_dataset.set_transform(train_transform)
-        self.val_dataset = ISICDataset(self.val_dataset_infos[0]["csv_path"],
+        self.val_dataset = get_dataset(self.val_dataset_infos[0]["csv_path"],
                                        self.val_dataset_infos[0]["img_path"],
                                        self.val_dataset_infos[0]["mode"])
         self.val_dataset.set_transform(val_transform)
@@ -1022,18 +1049,18 @@ class ISICTorchVisionDataModule(LightningDataModule):
         train_transform = self.train_transform
         val_transform = self.test_transform
 
-        self.train_dataset = ISICDataset(self.train_info[0]["csv_path"],
+        self.train_dataset = get_dataset(self.train_info[0]["csv_path"],
                                          self.train_info[0]["img_path"],
                                          self.train_info[0]["mode"],
                                          no_dict=False)
 
         self.train_dataset.set_transform(train_transform)
-        self.val_dataset = ISICDataset(self.val_info[0]["csv_path"],
+        self.val_dataset = get_dataset(self.val_info[0]["csv_path"],
                                        self.val_info[0]["img_path"],
                                        self.val_info[0]["mode"],
                                        no_dict=False)
         self.val_dataset.set_transform(val_transform)
-        self.test_dataset = ISICDataset(self.test_info[0]["csv_path"],
+        self.test_dataset = get_dataset(self.test_info[0]["csv_path"],
                                         self.test_info[0]["img_path"],
                                         self.test_info[0]["mode"],
                                         no_dict=False)
