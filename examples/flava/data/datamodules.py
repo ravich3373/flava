@@ -141,7 +141,7 @@ class ISICDataset(Dataset):
             im_pth = os.path.join(self.img_dir, data['image'])
             if Path(im_pth).suffix == "":
                 im_pth = im_pth + ".jpg"
-            img = Image.open(im_pth)
+            img = Image.open(im_pth).convert('RGB')
             data['image'] = img
             if self.ret_img_pth:
                 data['img_pth'] = im_pth
@@ -210,13 +210,6 @@ class CBISDataset(ISICDataset):
              y_col: "label",
              "description": "text"}
         self.df.rename(mapper=d, axis=1, inplace=True)
-    
-    def set_transform(self, transforms):
-        transforms = torchvision.transforms.Compose([
-            torchvision.transforms.Grayscale(num_output_channels=3),
-            transforms
-        ])
-        self.transforms = transforms
 
 
 class DataCollatorForWholeWordMaskRetainingBatch(DataCollatorForWholeWordMask):
