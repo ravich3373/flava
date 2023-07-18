@@ -108,8 +108,8 @@ def main():
                 else:
                     print(f"Training weight: {name}")
 
-    #trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
-    #trainer.validate(datamodule=datamodule)
+    trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
+    trainer.validate(datamodule=datamodule)
     trainer.test(model, datamodule=datamodule, ckpt_path=ckpt_path)
 
 

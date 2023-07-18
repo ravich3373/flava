@@ -116,7 +116,7 @@ def main():
         print(f"unexpected: {_.unexpected_keys}")
 
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
-    #trainer.validate(model, datamodule=datamodule)
+    trainer.validate(model, datamodule=datamodule)
 
 
 if __name__ == "__main__":
