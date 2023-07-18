@@ -257,7 +257,7 @@ class ImageDataModule(LightningDataModule):
 
         self.train_transform, self.test_transform = transforms
 
-    def setup(self, stage=None):
+    def setup(self, stage=None, ds="ISIC"):
         train_transform = partial(transform_image, self.train_transform)
         val_transform = partial(transform_image, self.test_transform)
         
@@ -332,7 +332,7 @@ class TextDataModule(LightningDataModule):
         self.num_workers = num_workers
         self.allow_uneven_batches = allow_uneven_batches
 
-    def setup(self, stage=None):
+    def setup(self, stage=None, ds="ISIC"):
         if self.tokenizer is None:
             self.tokenizer = BertTokenizer.from_pretrained(TEXT_DEFAULT_TOKENIZER)
         transform = partial(
@@ -401,7 +401,7 @@ class MLMDataModule(TextDataModule):
         self.mlm_probability = mlm_probability
         self.ignore_index = ignore_index
 
-    def setup(self, stage=None):
+    def setup(self, stage=None, ds="ISIC"):
         if self.tokenizer is None:
             self.tokenizer = BertTokenizer.from_pretrained(TEXT_DEFAULT_TOKENIZER)
         transform = partial(
@@ -457,7 +457,7 @@ class ISICMLMDataModule(TextDataModule):
         self.mlm_probability = mlm_probability
         self.ignore_index = ignore_index
 
-    def setup(self, stage=None):
+    def setup(self, stage=None, ds="ISIC"):
         if self.tokenizer is None:
             self.tokenizer = DistilBertTokenizer.from_pretrained("nlpie/bio-distilbert-uncased")#TEXT_DEFAULT_TOKENIZER)
         transform = partial(
@@ -473,11 +473,13 @@ class ISICMLMDataModule(TextDataModule):
         )
         self.train_dataset = get_dataset(self.train_dataset_infos[0]["csv_path"],
                                          self.train_dataset_infos[0]["img_path"],
-                                         "mlm")
+                                         "mlm",
+                                         type=ds)
         self.train_dataset.set_transform(transform)
         self.val_dataset = get_dataset(self.val_dataset_infos[0]["csv_path"],
                                        self.val_dataset_infos[0]["img_path"],
-                                       "mlm")
+                                       "mlm",
+                                       type=ds)
         self.val_dataset.set_transform(transform)
 
     def _build_dataloader(self, dataset, drop_last=True, shuffle=True):
@@ -546,7 +548,7 @@ class VLDataModule(LightningDataModule):
         self.fetch_timeout = fetch_timeout
         self.fetch_batch_size = fetch_batch_size
 
-    def setup(self, stage=None):
+    def setup(self, stage=None, ds="ISIC"):
         if self.text_transform is None:
             # TODO Update to use whole word mask vocab
             # text_tokenizer = BertTokenizer.from_pretrained(
@@ -724,7 +726,7 @@ class ISICVLDataModule(LightningDataModule):
         self.fetch_timeout = fetch_timeout
         self.fetch_batch_size = fetch_batch_size
 
-    def setup(self, stage=None):
+    def setup(self, stage=None, ds="ISIC"):
         if self.text_transform is None:
             # TODO Update to use whole word mask vocab
             # text_tokenizer = BertTokenizer.from_pretrained(
@@ -743,7 +745,8 @@ class ISICVLDataModule(LightningDataModule):
         self.train_dataset = get_dataset(self.train_dataset_infos[0]["csv_path"],
                                          self.train_dataset_infos[0]["img_path"],
                                          self.train_dataset_infos[0]["mode"],
-                                         no_dict=False)
+                                         no_dict=False,
+                                         type=ds)
         self.train_dataset.set_transform(
             partial(
                 train_vl_transform,
@@ -754,7 +757,8 @@ class ISICVLDataModule(LightningDataModule):
         self.val_dataset = get_dataset(self.val_dataset_infos[0]["csv_path"],
                                        self.val_dataset_infos[0]["img_path"],
                                        self.val_dataset_infos[0]["mode"],
-                                       no_dict=False)
+                                       no_dict=False,
+                                       type=ds)
         self.val_dataset.set_transform(
             partial(
                 val_vl_transform,
@@ -767,7 +771,8 @@ class ISICVLDataModule(LightningDataModule):
             self.test_dataset = get_dataset(self.test_dataset_infos[0]["csv_path"],
                                             self.test_dataset_infos[0]["img_path"],
                                             self.test_dataset_infos[0]["mode"],
-                                            no_dict=False)
+                                            no_dict=False,
+                                            type=ds)
             self.test_dataset.set_transform(
                 partial(
                     val_vl_transform,
@@ -870,18 +875,20 @@ class ISICDataModule(LightningDataModule):
 
         self.train_transform, self.test_transform = transforms
 
-    def setup(self, stage=None):
+    def setup(self, stage=None, ds="ISIC"):
         train_transform = self.train_transform
         val_transform = self.test_transform
 
         self.train_dataset = get_dataset(self.train_dataset_infos[0]["csv_path"],
                                          self.train_dataset_infos[0]["img_path"],
-                                         self.train_dataset_infos[0]["mode"])
+                                         self.train_dataset_infos[0]["mode"],
+                                         type=ds)
 
         self.train_dataset.set_transform(train_transform)
         self.val_dataset = get_dataset(self.val_dataset_infos[0]["csv_path"],
                                        self.val_dataset_infos[0]["img_path"],
-                                       self.val_dataset_infos[0]["mode"])
+                                       self.val_dataset_infos[0]["mode"],
+                                       type=ds)
         self.val_dataset.set_transform(val_transform)
 
     def train_dataloader(self):
@@ -968,7 +975,7 @@ class TorchVisionDataModule(LightningDataModule):
 
         return class_ptr, dataset_root
 
-    def setup(self, stage=None):
+    def setup(self, stage=None, ds="ISIC"):
         self.train_dataset = self.train_class_ptr(
             self.train_root,
             split=self.train_info.train_split,
@@ -1045,25 +1052,28 @@ class ISICTorchVisionDataModule(LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
 
-    def setup(self, stage=None):
+    def setup(self, stage=None, ds="ISIC"):
         train_transform = self.train_transform
         val_transform = self.test_transform
 
         self.train_dataset = get_dataset(self.train_info[0]["csv_path"],
                                          self.train_info[0]["img_path"],
                                          self.train_info[0]["mode"],
-                                         no_dict=False)
+                                         no_dict=False,
+                                         type=ds)
 
         self.train_dataset.set_transform(train_transform)
         self.val_dataset = get_dataset(self.val_info[0]["csv_path"],
                                        self.val_info[0]["img_path"],
                                        self.val_info[0]["mode"],
-                                       no_dict=False)
+                                       no_dict=False,
+                                       type=ds)
         self.val_dataset.set_transform(val_transform)
         self.test_dataset = get_dataset(self.test_info[0]["csv_path"],
                                         self.test_info[0]["img_path"],
                                         self.test_info[0]["mode"],
-                                        no_dict=False)
+                                        no_dict=False,
+                                        type=ds)
         self.test_dataset.set_transform(val_transform)
 
     def train_dataloader(self):
