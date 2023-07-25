@@ -85,13 +85,22 @@ def main():
                 **OmegaConf.to_container(config.training.lightning_checkpoint)
             )
         )
+    
+    if config.datasets.type == "ISIC":
+        val_batches = 254
+        test_batches = 0
+        limit_train_batches = 25350
+    elif config.datasets.type == "CBIS":
+        val_batches = 36
+        test_batches = 0
+        limit_train_batches = 3600
 
     trainer = Trainer(
         **OmegaConf.to_container(config.training.lightning),
         callbacks=callbacks,
-        limit_val_batches = 254,
-        limit_test_batches=0,
-        limit_train_batches=25350,  #25*1014,
+        limit_val_batches = val_batches,    # ISIC= 254, CBIS=36
+        limit_test_batches = test_batches,
+        limit_train_batches = train_batches,  #25*1014=25350(ISIC)/ (CBIS) 25*144=3600,
     )
     ckpt_path = config.training.lightning_load_from_checkpoint
     

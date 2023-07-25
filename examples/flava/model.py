@@ -251,8 +251,9 @@ class FLAVAClassificationLightningModule(LightningModule):
 
     def on_validation_epoch_end(self):
         acc = self.val_acc.compute()
-        re = self.val_avg_re.compute()
-        
+        avg_re = self.val_avg_re.compute()
+        re = self.val_re.compute()
+
         self.log(
             "validation/accuracy/classification",
             acc,
@@ -262,11 +263,37 @@ class FLAVAClassificationLightningModule(LightningModule):
         )
         self.log(
             "validation/micro_avg_recall/classification",
-            re,
+            avg_re,
             sync_dist=True,
             on_step=False, on_epoch=True,
             prog_bar=True, logger=True
         )
+
+        self.log_by_class(re, "recall", "validation")
+
+
+
+    def on_test_end_(self):
+        acc = self.val_acc.compute()
+        avg_re = self.val_avg_re.compute()
+        re = self.val_re.compute()
+
+        self.log(
+            "validation/accuracy/classification",
+            acc,
+            sync_dist=True,
+            on_step=False, on_epoch=True,
+            prog_bar=True, logger=True
+        )
+        self.log(
+            "validation/micro_avg_recall/classification",
+            avg_re,
+            sync_dist=True,
+            on_step=False, on_epoch=True,
+            prog_bar=True, logger=True)
+
+        self.log_by_class(re, "recall", "test")
+
 
 
     def configure_optimizers(self):

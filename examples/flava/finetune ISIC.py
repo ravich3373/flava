@@ -73,12 +73,21 @@ def main():
                 **OmegaConf.to_container(config.training.lightning_checkpoint)
             )
         )
+    
+    if config.datasets.type == "ISIC":
+        val_batches = 254
+        test_batches = 317
+        limit_train_batches = 25350
+    elif config.datasets.type == "CBIS":
+        val_batches = 36
+        test_batches = 44
+        limit_train_batches = 3600
 
     trainer = Trainer(
         **OmegaConf.to_container(config.training.lightning), callbacks=callbacks,
-        limit_val_batches = 254,
-        limit_test_batches=317,
-        limit_train_batches=25350,  #25*1014,
+        limit_val_batches = val_batches, #ISIC-254, FLAVA-36
+        limit_test_batches = test_batches, #ISIC-317/CBIS-44
+        limit_train_batches = train_batches,  #ISIC-25*1014/ CBIS-3600,
         max_epochs=15
     )
     ckpt_path = config.training.lightning_load_from_checkpoint
@@ -107,9 +116,14 @@ def main():
                     p.requires_grad = False
                 else:
                     print(f"Training weight: {name}")
+    
+    #lr_finder = trainer.tuner.lr_find(model, datamodule=datamodule)
+    #new_lr = lr_finder.suggestion()
+    #model.hparams.lr = new_lr
+    #print("Learning Rate found is ", new_lr)
 
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
-    trainer.validate(datamodule=datamodule)
+    trainer.validate(model, datamodule=datamodule, ckpt_path=ckpt_path)
     trainer.test(model, datamodule=datamodule, ckpt_path=ckpt_path)
 
 
