@@ -49,14 +49,16 @@ def main():
     if "text" in config.datasets.selected:
         mlm_datamodule = ISICMLMDataModule(
             **build_datamodule_kwargs(config.datasets.text, config.training),
-            type=config.datasets.type
+            type=config.datasets.type,
+            tok_type=config.model.text_enc
         )
         datamodules.append(mlm_datamodule)
 
     if "vl" in config.datasets.selected:
         vl_datamodule = ISICVLDataModule(
             **build_datamodule_kwargs(config.datasets.vl, config.training),
-            type=config.datasets.type
+            type=config.datasets.type,
+            tok_type=config.model.text_enc
         )
         datamodules.append(vl_datamodule)
 

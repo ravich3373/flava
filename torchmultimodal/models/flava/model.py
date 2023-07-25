@@ -455,6 +455,7 @@ def flava_model(
     # projection
     text_and_image_proj_size: int = 768,
     pretrained: bool = False,
+    text_enc = "nlpie/bio-distilbert-uncased",
     **kwargs: Any,
 ) -> FLAVAModel:
     image_encoder = flava_image_encoder(
@@ -483,8 +484,8 @@ def flava_model(
 #        type_vocab_size=type_vocab_size,
 #        max_position_embeddings=max_position_embeddings,
 #    )
-    cfg1 = DistilBertConfig.from_pretrained("nlpie/bio-distilbert-uncased", output_hidden_states=True, output_attentions=True)
-    text_encoder = DistilBertModel.from_pretrained("nlpie/bio-distilbert-uncased", config=cfg1)
+    cfg1 = DistilBertConfig.from_pretrained(text_enc, output_hidden_states=True, output_attentions=True)
+    text_encoder = DistilBertModel.from_pretrained(text_enc, config=cfg1)
     mm_encoder = flava_multimodal_encoder(
         hidden_size=multimodal_hidden_size,
         num_attention_heads=multimodal_num_attention_heads,

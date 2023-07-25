@@ -47,7 +47,8 @@ def main():
             finetuning=True,
             itm_probability=-1,  # ravi dont want to mismatch images and texts.
             use_dict=True, unnest=True,
-            type=config.datasets.type
+            type=config.datasets.type,
+            tok_type=config.model.text_enc
         )
 
     datamodule.setup("fit")

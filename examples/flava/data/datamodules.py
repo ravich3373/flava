@@ -448,16 +448,18 @@ class ISICMLMDataModule(TextDataModule):
         mlm_probability: float = 0.15,
         ignore_index: int = -1,
         type="ISIC",
+        tok_type = "nlpie",
         **kwargs: Any,
     ):
         super().__init__(train_infos, text_columns, val_infos, **kwargs)
         self.mlm_probability = mlm_probability
         self.ignore_index = ignore_index
         self.type = type
+        self.tok_type = tok_type
 
     def setup(self, stage=None):
         if self.tokenizer is None:
-            self.tokenizer = DistilBertTokenizer.from_pretrained("nlpie/bio-distilbert-uncased")#TEXT_DEFAULT_TOKENIZER)
+            self.tokenizer = DistilBertTokenizer.from_pretrained(self.tok_type)#TEXT_DEFAULT_TOKENIZER)
         transform = partial(
             encode_text_batch,
             tokenizer=self.tokenizer,
@@ -518,12 +520,14 @@ class VLDataModule(LightningDataModule):
         fetch_sleep_timer: int = 0,
         fetch_timeout: Optional[float] = None,
         fetch_batch_size: int = 50,
+        tok_type = "nlpie",
         **kwargs,
     ):
         super().__init__()
 
         self.train_dataset_infos = train_infos
         self.val_dataset_infos = val_infos
+        self.tok_type = tok_type
         if self.val_dataset_infos is None:
             self.val_dataset_infos = train_infos
         if image_transforms is None:
@@ -552,7 +556,7 @@ class VLDataModule(LightningDataModule):
             # text_tokenizer = BertTokenizer.from_pretrained(
             #     TEXT_WHOLE_WORD_MASK_TOKENIZER
             # )
-            text_tokenizer = DistilBertTokenizer.from_pretrained("nlpie/bio-distilbert-uncased")
+            text_tokenizer = DistilBertTokenizer.from_pretrained(self.tok_type)
             self.text_transform = default_text_transform(
                 text_tokenizer, max_text_length=VL_MAX_LENGTH_DEFAULT
             )
@@ -692,6 +696,7 @@ class ISICVLDataModule(LightningDataModule):
         use_dict: bool = False,
         unnest: bool = True,
         type: str = "ISIC",
+        tok_type = "nlpie",
         **kwargs,
     ):
         super().__init__()
@@ -699,6 +704,7 @@ class ISICVLDataModule(LightningDataModule):
         self.use_dict = use_dict
         self.unnest = unnest
         self.type = type
+        self.tok_type = tok_type
 
         self.train_dataset_infos = train_infos
         self.val_dataset_infos = val_infos
@@ -732,7 +738,8 @@ class ISICVLDataModule(LightningDataModule):
             # text_tokenizer = BertTokenizer.from_pretrained(
             #     TEXT_WHOLE_WORD_MASK_TOKENIZER
             # )
-            text_tokenizer = DistilBertTokenizer.from_pretrained("nlpie/bio-distilbert-uncased")
+
+            text_tokenizer = DistilBertTokenizer.from_pretrained(self.tok_type) # "nlpie/bio-distilbert-uncased"
             self.text_transform = default_text_transform(
                 text_tokenizer, max_text_length=VL_MAX_LENGTH_DEFAULT
             )

@@ -90,7 +90,7 @@ class TrainingArguments:
 @dataclass
 class ModelArguments:
     pretrained: bool = False
-
+    text_enc: str = "nlpie/bio-distilbert-uncased"
 
 @dataclass
 class FLAVAArguments:
