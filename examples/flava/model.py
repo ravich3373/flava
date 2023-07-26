@@ -8,7 +8,7 @@ from typing import Any, Tuple
 
 import torch
 from pytorch_lightning import LightningModule
-from torchmetrics import Accuracy, Recall, ConfusionMatrix
+from torchmetrics import Accuracy, Recall, ConfusionMatrix, MulticlassAUROC
 from torchmultimodal.models.flava.model import (
     flava_model_for_classification,
     flava_model_for_pretraining,
@@ -130,6 +130,7 @@ class FLAVAClassificationLightningModule(LightningModule):
         adam_betas: Tuple[float, float] = (0.9, 0.999),
         warmup_steps: int = 2000,
         max_steps: int = 450000,
+        ds_type = "ISIC",
         **flava_classification_kwargs: Any,
     ):
         super().__init__()
@@ -142,13 +143,22 @@ class FLAVAClassificationLightningModule(LightningModule):
         self.warmup_steps = warmup_steps
         self.max_steps = max_steps
         self.adam_betas = adam_betas
-        self.acc = Accuracy(task="multiclass", num_classes=num_classes, average="macro")
-        self.re = Recall(task="multiclass", num_classes=num_classes, average=None)
-        self.avg_re = Recall(task="multiclass", num_classes=num_classes, average="macro")
+        if ds_type == "ISIC":
+            self.acc = Accuracy(task="multiclass", num_classes=num_classes, average="macro")
+            self.re = Recall(task="multiclass", num_classes=num_classes, average=None)
+            self.avg_re = Recall(task="multiclass", num_classes=num_classes, average="macro")
 
-        self.val_acc = Accuracy(task="multiclass", num_classes=num_classes, average="macro")
-        self.val_re = Recall(task="multiclass", num_classes=num_classes, average=None)
-        self.val_avg_re = Recall(task="multiclass", num_classes=num_classes, average="macro")
+            self.val_acc = Accuracy(task="multiclass", num_classes=num_classes, average="macro")
+            self.val_re = Recall(task="multiclass", num_classes=num_classes, average=None)
+            self.val_avg_re = Recall(task="multiclass", num_classes=num_classes, average="macro")
+        elif ds_type == "CBIS":
+            self.acc = Accuracy(task="multiclass", num_classes=num_classes, average="macro")
+            self.re = Recall(task="multiclass", num_classes=num_classes, average=None)
+            self.avg_re = MulticlassAUROC(num_classes=num_classes, average="macro", thresholds=None)
+
+            self.val_acc = Accuracy(task="multiclass", num_classes=num_classes, average="macro")
+            self.val_re = Recall(task="multiclass", num_classes=num_classes, average=None)
+            self.val_avg_re = MulticlassAUROC(num_classes=num_classes, average="macro", thresholds=None)
 
 
     def log_by_class(self, metric_tensor, matric_name, split):
