@@ -444,6 +444,7 @@ def flava_model(
     pad_token_id: int = 0,
     type_vocab_size: int = 2,
     max_position_embeddings: int = 512,
+    random_init_te: bool = False,
     # Multimodal encoder specific parameters
     multimodal_hidden_size: int = 768,
     multimodal_num_attention_heads: int = 12,
@@ -486,6 +487,8 @@ def flava_model(
 #    )
     cfg1 = DistilBertConfig.from_pretrained(text_enc, output_hidden_states=True, output_attentions=True)
     text_encoder = DistilBertModel.from_pretrained(text_enc, config=cfg1)
+    if random_init_te:
+        text_encoder.init_weights()
     mm_encoder = flava_multimodal_encoder(
         hidden_size=multimodal_hidden_size,
         num_attention_heads=multimodal_num_attention_heads,

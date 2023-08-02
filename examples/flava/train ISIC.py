@@ -72,6 +72,7 @@ def main():
         adam_betas=config.training.adam_betas,
         warmup_steps=config.training.warmup_steps,
         max_steps=config.training.lightning.max_steps,
+        random_init_te = config.random_init_te,
         **config.model,
     )
 
