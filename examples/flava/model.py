@@ -8,7 +8,7 @@ from typing import Any, Tuple
 
 import torch
 from pytorch_lightning import LightningModule
-from torchmetrics import Accuracy, Recall, ConfusionMatrix, MulticlassAUROC
+from torchmetrics import Accuracy, Recall, ConfusionMatrix, AUROC
 from torchmultimodal.models.flava.model import (
     flava_model_for_classification,
     flava_model_for_pretraining,
@@ -154,11 +154,11 @@ class FLAVAClassificationLightningModule(LightningModule):
         elif ds_type == "CBIS":
             self.acc = Accuracy(task="multiclass", num_classes=num_classes, average="macro")
             self.re = Recall(task="multiclass", num_classes=num_classes, average=None)
-            self.avg_re = MulticlassAUROC(num_classes=num_classes, average="macro", thresholds=None)
+            self.avg_re = AUROC(task="multiclass", num_classes=num_classes, average="macro", thresholds=None)
 
             self.val_acc = Accuracy(task="multiclass", num_classes=num_classes, average="macro")
             self.val_re = Recall(task="multiclass", num_classes=num_classes, average=None)
-            self.val_avg_re = MulticlassAUROC(num_classes=num_classes, average="macro", thresholds=None)
+            self.val_avg_re = AUROC(task="multiclass", num_classes=num_classes, average="macro", thresholds=None)
 
 
     def log_by_class(self, metric_tensor, matric_name, split):

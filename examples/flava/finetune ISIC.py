@@ -52,7 +52,6 @@ def main():
         )
 
     datamodule.setup("fit")
-
     model = FLAVAClassificationLightningModule(
         num_classes=config.datasets.num_classes,
         learning_rate=config.training.learning_rate,
@@ -61,6 +60,7 @@ def main():
         adam_betas=config.training.adam_betas,
         warmup_steps=config.training.warmup_steps,
         max_steps=config.training.lightning.max_steps,
+        pretrained=False,
         ds_type=config.datasets.type,
         **config.model,
     )
