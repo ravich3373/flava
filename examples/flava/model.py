@@ -60,6 +60,9 @@ class FLAVAPreTrainingLightningModule(LightningModule):
         self.warmup_steps = warmup_steps
         self.max_steps = max_steps
 
+        self.val_total_losses = []
+        self.val_bs = []
+
     def training_step(self, batch, batch_idx):
         output = self._step(batch, batch_idx)
         losses = output.losses
@@ -81,8 +84,19 @@ class FLAVAPreTrainingLightningModule(LightningModule):
                 self.log(
                     f"validation/losses/{key}", losses[key], prog_bar=True, logger=True
                 )
+        
+        self.val_total_losses.append(total_loss.cpu().detach().item())
+        for key in batch:
+            bs = batch[key].shape[0]
+        self.val_bs.append(bs)
 
         return total_loss
+
+    def on_validation_epoch_end(self):
+        total_avg_loss = sum(self.val_total_losses)/sum(self.val_bs)
+        self.log(f"validation/losses/total_val_loss", total_avg_loss, prog_bar=True, logger=True)
+        self.val_total_losses = []
+        self.val_bs = []
 
     def _step(self, batch, batch_idx):
         if "image" in batch and ("text" in batch or "text_masked" in batch):
