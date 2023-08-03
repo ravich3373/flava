@@ -85,10 +85,10 @@ class FLAVAPreTrainingLightningModule(LightningModule):
                     f"validation/losses/{key}", losses[key], prog_bar=True, logger=True
                 )
         
-        self.val_total_losses.append(total_loss.cpu().detach().item())
         for key in batch:
             bs = batch[key].shape[0]
         self.val_bs.append(bs)
+        self.val_total_losses.append(total_loss.cpu().detach().item()*bs)
 
         return total_loss
 

@@ -98,7 +98,7 @@ class FLAVAArguments:
     pre_train_type: List[str] = MISSING # init part/whole of model for pretraining
     init_path: str = MISSING    # init model for finetuning
     linear_probe: bool = MISSING
-    random_init_te: bool = MISSING
+    random_init_te: bool = False
     freeze_te: bool = MISSING
     datasets: TrainingDatasetsInfo = TrainingDatasetsInfo()
     training: TrainingArguments = TrainingArguments()
