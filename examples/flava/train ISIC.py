@@ -126,6 +126,14 @@ def main():
         _ = model.load_state_dict(sel_dict, strict=False)
         print(f"missing: {_.missing_keys}")
         print(f"unexpected: {_.unexpected_keys}")
+    
+    if "freeze_te" in config and config.freeze_te:
+        freeze_layers = mlm_weights[:2]
+        for name, p in model.named_parameters():
+            for freeze_tag in freeze_layers:
+                if freeze_tag in name:
+                    p.requires_grad = False
+
 
     trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
     trainer.validate(model, datamodule=datamodule)

@@ -99,6 +99,7 @@ class FLAVAArguments:
     init_path: str = MISSING    # init model for finetuning
     linear_probe: bool = MISSING
     random_init_te: bool = MISSING
+    freeze_te: bool = MISSING
     datasets: TrainingDatasetsInfo = TrainingDatasetsInfo()
     training: TrainingArguments = TrainingArguments()
     model: ModelArguments = ModelArguments()
