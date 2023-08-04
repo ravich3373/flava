@@ -128,6 +128,7 @@ def main():
         print(f"unexpected: {_.unexpected_keys}")
     
     if "freeze_te" in config and config.freeze_te:
+        print("------> Freezing the text encoder <----------")
         freeze_layers = mlm_weights[:2]
         for name, p in model.named_parameters():
             for freeze_tag in freeze_layers:
