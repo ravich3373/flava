@@ -188,6 +188,11 @@ class FLAVAModel(nn.Module):
             ["text", "mm"],
             self.encode_text,
         )
+        text_masked_outputs = TransformerOutput(
+            last_hidden_state=text_masked_outputs.last_hidden_state,
+            hidden_states = text_masked_outputs.hidden_states,
+            attentions = text_masked_outputs.attentions,
+        )
         assert type(text_masked_outputs) == TransformerOutput
 
         multimodal_outputs = TransformerOutput()

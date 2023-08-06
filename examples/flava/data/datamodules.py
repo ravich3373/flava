@@ -494,12 +494,19 @@ class ISICMLMDataModule(TextDataModule):
             self.tokenizer, mlm_probability=self.mlm_probability
         )
 
+    def on_before_batch_transfer(self, batch, *args):
+        batch = self._unnest(batch)
+        return super().on_before_batch_transfer(batch, *args)
+
     def on_after_batch_transfer(self, batch, *args):
         batch["text_masked"] = batch.pop("input_ids")
         batch["mlm_labels"] = batch.pop("labels")
         batch["mlm_labels"][batch["mlm_labels"] == -100] = self.ignore_index
         return batch
 
+    def _unnest(self, py_dict):
+        """Return the first element of a batch (dict) as a row (dict)"""
+        return {key: array.squeeze() for key, array in py_dict.items()}
 
 class VLDataModule(LightningDataModule):
     def __init__(
@@ -761,6 +768,7 @@ class ISICVLDataModule(LightningDataModule):
                 itm_probability=self.itm_probability,
             )
         )
+        self.train_dataset[0]
         self.val_dataset = get_dataset(self.val_dataset_infos[0]["csv_path"],
                                        self.val_dataset_infos[0]["img_path"],
                                        self.val_dataset_infos[0]["mode"],

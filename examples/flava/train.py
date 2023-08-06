@@ -56,7 +56,7 @@ def main():
 
     callbacks = [
         LearningRateMonitor(logging_interval="step"),
-        MultimodalEvalCallback(imagenet_datamodule=imagenet_datamodule),
+        #MultimodalEvalCallback(imagenet_datamodule=imagenet_datamodule),
     ]
 
     if config.training.lightning_checkpoint is not None:
