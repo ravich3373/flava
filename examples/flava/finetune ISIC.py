@@ -79,11 +79,11 @@ def main():
     if config.datasets.type == "ISIC":
         val_batches = 254
         test_batches = 317
-        train_batches = 25350
+        train_batches = 15210
     elif config.datasets.type == "CBIS":
         val_batches = 36
         test_batches = 44
-        train_batches = 3600
+        train_batches = 2160
 
     trainer = Trainer(
         **OmegaConf.to_container(config.training.lightning), callbacks=callbacks,

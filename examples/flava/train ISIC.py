@@ -92,11 +92,11 @@ def main():
     if config.datasets.type == "ISIC":
         val_batches = 254
         test_batches = 0
-        train_batches = 25350
+        train_batches = 25350 // 2
     elif config.datasets.type == "CBIS":
         val_batches = 36
         test_batches = 0
-        train_batches = 3600
+        train_batches = 3600 // 2
 
     trainer = Trainer(
         **OmegaConf.to_container(config.training.lightning),
