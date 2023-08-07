@@ -117,6 +117,7 @@ class FLAVAModel(nn.Module):
         text_to_mm_projection: nn.Module,
         text_projection: nn.Module,
         image_projection: nn.Module,
+        late_fusion: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__()
@@ -127,6 +128,7 @@ class FLAVAModel(nn.Module):
         self.text_to_mm_projection = text_to_mm_projection
         self.text_projection = text_projection
         self.image_projection = image_projection
+        self.late_fusion = late_fusion
 
     def forward(
         self,
@@ -198,7 +200,7 @@ class FLAVAModel(nn.Module):
         multimodal_outputs = TransformerOutput()
         multimodal_masked_outputs = TransformerOutput()
 
-        if required_embedding == "mm":
+        if required_embedding == "mm" and not self.late_fusion:
             # Take last hidden state and not the last_hidden_state because
             # for flava we want the hidden state without final layernorm.
             if not skip_unmasked_mm_encoder:
@@ -382,12 +384,14 @@ class FLAVAForClassification(nn.Module):
         model: FLAVAModel,
         classifier: nn.Module,
         loss: Union[nn.Module, Callable[[Tensor, Tensor], Tensor]],
+        late_fusion: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__()
         self.model = model
         self.classifier = classifier
         self.loss = loss
+        self.late_fusion = late_fusion
 
     def forward(
         self,
@@ -411,9 +415,18 @@ class FLAVAForClassification(nn.Module):
         elif required_embedding == "text":
             hidden_state = flava_output.text.last_hidden_state
         else:
-            hidden_state = flava_output.multimodal.last_hidden_state
+            if self.late_fusion:
+                v_h = self.classifier.v_proj(flava_output.image.last_hidden_state[:, cls_index])
+                l_h = self.classifier.l_proj(flava_output.text.last_hidden_state[:, cls_index])
+                hidden_state = torch.cat([v_h, l_h], dim=1)
+            else:
+                hidden_state = flava_output.multimodal.last_hidden_state
 
-        scores = self.classifier(hidden_state[:, cls_index])
+        if self.late_fusion:
+            scores = self.classifier(hidden_state)
+        else:
+            scores = self.classifier(hidden_state[:, cls_index])
+
         loss = self.loss(scores, labels)
         return FLAVAForClassificationOutput(
             logits=scores,
@@ -461,6 +474,7 @@ def flava_model(
     # projection
     text_and_image_proj_size: int = 768,
     pretrained: bool = False,
+    late_fusion: bool = False,
     text_enc = "nlpie/bio-distilbert-uncased",
     **kwargs: Any,
 ) -> FLAVAModel:
@@ -518,6 +532,7 @@ def flava_model(
         text_to_mm_projection=text_to_mm_projection,
         text_projection=text_projection,
         image_projection=image_projection,
+        late_fusion=late_fusion
     )
 
     if pretrained:
@@ -578,23 +593,36 @@ def flava_model_for_classification(
     classifier_normalization: Optional[Callable[..., nn.Module]] = None,
     loss_fn: Optional[Callable[..., Tensor]] = None,
     pretrained: bool = True,
+    late_fusion: bool = True,
     **flava_model_kwargs: Any,
 ) -> FLAVAForClassification:
 
-    classifier = MLP(
-        in_dim=classifier_in_dim,
-        out_dim=num_classes,
-        hidden_dims=classifier_hidden_sizes,
-        dropout=classifier_dropout,
-        activation=classifier_activation,
-        normalization=classifier_normalization,
-    )
-    model = flava_model(**flava_model_kwargs)
+    if late_fusion:
+        classifier = MLP(
+            in_dim=600,
+            out_dim=num_classes,
+            hidden_dims=classifier_hidden_sizes,
+            dropout=classifier_dropout,
+            activation=classifier_activation,
+            normalization=classifier_normalization,
+            late_fusion = late_fusion
+        )
+    else:
+        classifier = MLP(
+            in_dim=classifier_in_dim,
+            out_dim=num_classes,
+            hidden_dims=classifier_hidden_sizes,
+            dropout=classifier_dropout,
+            activation=classifier_activation,
+            normalization=classifier_normalization,
+        )
+
+    model = flava_model(late_fusion=late_fusion, **flava_model_kwargs)
     if loss_fn is None:
-        loss_fn = FocalLoss() #nn.CrossEntropyLoss() ravi
+        loss_fn = nn.CrossEntropyLoss() #FocalLoss()  ravi
 
     classification_model = FLAVAForClassification(
-        model=model, classifier=classifier, loss=loss_fn
+        model=model, classifier=classifier, loss=loss_fn, late_fusion=late_fusion
     )
 
     if pretrained:

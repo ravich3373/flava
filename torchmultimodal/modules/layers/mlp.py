@@ -40,6 +40,7 @@ class MLP(nn.Module):
         dropout: float = 0.5,
         activation: Callable[..., nn.Module] = nn.ReLU,
         normalization: Optional[Callable[..., nn.Module]] = None,
+        late_fusion: bool = False,
     ) -> None:
         super().__init__()
         torch._C._log_api_usage_once(f"torchmultimodal.{self.__class__.__name__}")
@@ -50,6 +51,10 @@ class MLP(nn.Module):
 
         if isinstance(hidden_dims, int):
             hidden_dims = [hidden_dims]
+
+        if late_fusion:
+            self.v_proj = nn.Linear(768, 300)
+            self.l_proj = nn.Linear(768, 300)
 
         for hidden_dim in hidden_dims:
             layers.append(nn.Linear(in_dim, hidden_dim))

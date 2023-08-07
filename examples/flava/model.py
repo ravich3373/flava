@@ -32,11 +32,13 @@ def get_optimizers_for_lightning(
         eps=adam_eps,
         weight_decay=adam_weight_decay,
     )
-    scheduler = get_cosine_schedule_with_warmup(
-        optimizer,
-        num_warmup_steps=warmup_steps,
-        num_training_steps=max_steps,
-    )
+    # scheduler = get_cosine_schedule_with_warmup(
+    #     optimizer,
+    #     num_warmup_steps=warmup_steps,
+    #     num_training_steps=max_steps,
+    # )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
+                                                                 T_0=5,eta_min=0,last_epoch=-1)
     return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
 
 
@@ -149,7 +151,7 @@ class FLAVAClassificationLightningModule(LightningModule):
     ):
         super().__init__()
         self.model = flava_model_for_classification(
-            num_classes, image_size=384, **flava_classification_kwargs
+            num_classes, image_size=384, classifier_dropout=0, **flava_classification_kwargs
         )
         self.learning_rate = learning_rate
         self.adam_eps = adam_eps

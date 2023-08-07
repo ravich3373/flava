@@ -60,7 +60,7 @@ def main():
         adam_betas=config.training.adam_betas,
         warmup_steps=config.training.warmup_steps,
         max_steps=config.training.lightning.max_steps,
-        pretrained=False,
+        #pretrained=False,
         ds_type=config.datasets.type,
         **config.model,
     )
