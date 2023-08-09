@@ -76,6 +76,9 @@ def main():
         **config.model,
     )
 
+    if "random_init_te" in config and config.random_init_te:
+        print("\n\n------------> Random Init Text Encoder <----------------")
+
     callbacks = [
         LearningRateMonitor(logging_interval="step"),
         #MultimodalEvalCallback(imagenet_datamodule=imagenet_datamodule), ravi
