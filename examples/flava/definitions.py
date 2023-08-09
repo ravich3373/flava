@@ -91,6 +91,7 @@ class TrainingArguments:
 class ModelArguments:
     pretrained: bool = False
     text_enc: str = "nlpie/bio-distilbert-uncased"
+    late_fusion: bool = MISSING
 
 @dataclass
 class FLAVAArguments:
